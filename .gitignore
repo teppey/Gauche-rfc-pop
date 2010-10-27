@@ -4,6 +4,6 @@ Makefile
 config.log
 config.status
 test.log
-testsrv.o
+testsrv.scm
 Gauche-rfc-pop3.gpd
 autom4te.cache

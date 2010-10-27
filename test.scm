@@ -97,8 +97,8 @@
     ))
 
 ;; Start test server
-(with-output-to-file "./testsrv.o" (lambda () (for-each write *simple-popd*)))
-(let1 pc (run-process '("gosh" "./testsrv.o") :output :pipe)
+(with-output-to-file "./testsrv.scm" (lambda () (for-each write *simple-popd*)))
+(let1 pc (run-process '("gosh" "./testsrv.scm") :output :pipe)
   (read-line (process-output pc)) ;handshake
   )
 

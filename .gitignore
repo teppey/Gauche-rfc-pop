@@ -1,0 +1,9 @@
+VERSION
+configure
+Makefile
+config.log
+config.status
+test.log
+testsrv.o
+Gauche-rfc-pop3.gpd
+autom4te.cache

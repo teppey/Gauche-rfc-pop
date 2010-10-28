@@ -117,7 +117,7 @@
   (define (single msgnum)
     (let1 res (check-response (send-command conn "LIST ~d" msgnum))
       (if-let1 m (#/^\+OK\s+(\d+)\s+(\d+)$/ res)
-        (list (cons (string->number (m 1)) (string->number (m 2))))
+        (values (string->number (m 1)) (string->number (m 2)))
         (error <pop3-bad-response-error> "bad response:" res))))
   (define (all)
     (let1 res (check-response (send-command conn "LIST"))

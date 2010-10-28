@@ -182,7 +182,9 @@
 (define (pop3-noop conn)
   (check-response (send-command conn "NOOP")))
 
-;(define (pop3-rset conn))
+(define (pop3-rset conn)
+  (check-response (send-command conn "RSET")))
+
 ;(define (pop3-top conn))
 ;(define (pop3-uidl conn))
 

@@ -157,7 +157,6 @@
     (cond [(eof-object? line)
            (error <pop3-error> "unexpected EOF")]
           [(#/^\.\r\n/ line)
-           (%logging #`"read message (,size bytes)")
            (undefined)]
           [else
             (proc (regexp-replace #/^\./ line ""))

@@ -119,7 +119,6 @@
 (test* "apop ng" (test-error <pop3-authentication-error>)
        (pop3-apop conn "user" "bad password"))
 
-
 (pop3-quit conn)
 
 (sys-waitpid -1)

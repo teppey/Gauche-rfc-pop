@@ -44,7 +44,6 @@
    (apop   :init-keyword :apop   :init-value #f)
    (stamp  :init-value #f)))
 
-
 (define (make-pop3-connection host . options)
   (let-keywords options ((port *default-pop3-port*)
                          (apop #f))
@@ -58,7 +57,6 @@
       (and-let* ((m (#/<.*>/ res)))
         (set! (ref conn 'stamp) (m)))
       conn)))
-
 
 ;(define (call-with-pop3-connection proc host username password . options)
 ;  (let-keywords options ((port *default-pop3-port*)
@@ -114,14 +112,42 @@
                  (digest-string <md5> #`",(ref conn 'stamp),|password|"))
     (check-response-auth (send-command conn "APOP ~a ~a" username digest))))
 
-;(define (pop3-stat conn))
-;(define (pop3-list conn))
+(define (pop3-stat conn)
+  (let1 res (check-response (send-command conn "STAT"))
+    (if-let1 m (#/^\+OK\s+(\d+)\s+(\d+)/ res)
+      (values (string->number (m 1)) (string->number (m 2)))
+      (pop3-error <pop3-bad-response-error> "wrong response format: ~a" res))))
+
+(define (pop3-list conn :optional (msgnum #f))
+  (define (single msgnum)
+    (let1 res (check-response (send-command conn "LIST ~d" msgnum))
+      (if-let1 m (#/^\+OK\s+(\d+)\s+(\d+)$/ res)
+        (list (cons (string->number (m 1)) (string->number (m 2))))
+        (pop3-error <pop3-bad-response-error> "bad response: ~a" res))))
+  (define (all)
+    (let1 res (check-response (send-command conn "LIST"))
+      (let loop ((line (read-line (socket-input-port (ref conn 'socket))))
+                 (r '()))
+        (cond
+          ((equal? line ".")
+           (reverse! r))
+          ((#/^(\d+)\s+(\d+)$/ line)
+           => (lambda (m)
+                (loop (read-line (socket-input-port (ref conn 'socket)))
+                      (acons (string->number (m 1))
+                             (string->number (m 2))
+                             r))))
+          (else
+            (pop3-error <pop3-bad-response-error> "bad response: ~a" res))))))
+  (if msgnum
+    (single msgnum)
+    (all)))
+
 ;(define (pop3-retr conn))
 ;(define (pop3-dele conn))
 ;(define (pop3-noop conn))
 ;(define (pop3-rset conn))
 ;(define (pop3-top conn))
 ;(define (pop3-uidl conn))
-;(define (pop3-apop conn))
 
 (provide "rfc/pop3")

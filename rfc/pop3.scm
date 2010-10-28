@@ -179,7 +179,9 @@
 (define (pop3-dele conn msgnum)
   (check-response (send-command conn "DELE ~d" msgnum)))
 
-;(define (pop3-noop conn))
+(define (pop3-noop conn)
+  (check-response (send-command conn "NOOP")))
+
 ;(define (pop3-rset conn))
 ;(define (pop3-top conn))
 ;(define (pop3-uidl conn))

@@ -95,7 +95,8 @@
                 [(#/^NOOP$/ line)
                  (display "+OK done nothing\r\n" out)
                  (loop (read-line in))]
-                [(#/^RETR\s*\d+$/ line)
+                [(or (#/^RETR\s*\d+$/ line)
+                     (#/^TOP\s*\d+\s*\d+$/ line))
                  (let1 res (string-join *retr-response* "\r\n")
                    (format out "+OK ~d bytes\r\n" (string-size res))
                    (display res out))
@@ -158,6 +159,11 @@
                 (string-join (drop-right *retr-response* 1) "\r\n")
                 "\r\n")
        (pop3-retr conn 1))
+
+(test* "top" (string-append
+                (string-join (drop-right *retr-response* 1) "\r\n")
+                "\r\n")
+       (pop3-top conn 1 1))
 
 (test-ok "quit" (pop3-quit conn))
 

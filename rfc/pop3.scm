@@ -6,6 +6,8 @@
   (use gauche.net)
   (use gauche.logger)
   (use srfi-13)
+  (use rfc.md5)
+  (use util.digest)
   (export-all)
   )
 (select-module rfc.pop3)
@@ -29,8 +31,8 @@
 (define-constant *open-timeout* 30)
 
 (define-condition-type <pop3-error> <error> #f)
-(define-condition-type <pop3-auth-error> <pop3-error> #f)
-(define-condition-type <pop3-bad-response> <pop3-error> #f)
+(define-condition-type <pop3-authentication-error> <pop3-error> #f)
+(define-condition-type <pop3-bad-response-error> <pop3-error> #f)
 
 (define (pop3-error condition message . args)
   (apply error condition message args))
@@ -81,10 +83,17 @@
 (define (get-response conn)
   (read-line (socket-input-port (ref conn 'socket))))
 
+(define response-ok? (pa$ string-prefix? "+OK"))
+
 (define (check-response res)
-  (if (string-prefix? "+OK" res)
+  (if (response-ok? res)
     res
-    (pop3-error <pop3-bad-response> res)))
+    (pop3-error <pop3-bad-response-error> res)))
+
+(define (check-response-auth res)
+  (if (response-ok? res)
+    res
+    (pop3-error <pop3-authentication-error> res)))
 
 (define (pop3-quit conn)
   (unwind-protect
@@ -93,16 +102,17 @@
       (begin (socket-close s)
              (set! (ref conn 'socket) #f)))))
 
-
-(define (pop3-user conn username)
-  (send-command conn "USER ~a" username))
-
-(define (pop3-pass conn password)
-  (send-command conn "PASS ~a" password))
-
 (define (pop3-auth conn username password)
-  (check-response (pop3-user conn username))
-  (check-response (pop3-pass conn password)))
+  (check-response-auth (send-command conn "USER ~a" username))
+  (check-response-auth (send-command conn "PASS ~a" password)))
+
+(define (pop3-apop conn username password)
+  (unless (ref conn 'stamp)
+    (pop3-error <pop3-authentication-error> "not APOP server; cannot login"))
+  raise
+  (let1 digest (digest-hexify
+                 (digest-string <md5> #`",(ref conn 'stamp),|password|"))
+    (check-response-auth (send-command conn "APOP ~a ~a" username digest))))
 
 ;(define (pop3-stat conn))
 ;(define (pop3-list conn))

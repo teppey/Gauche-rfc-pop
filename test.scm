@@ -16,7 +16,6 @@
 
 (define *pop-port* 7011)
 (define *users* '(("user" . "pass")))
-(define *ok-user* "user")
 (define *apop-stamp* #`"<,(sys-getpid).,(sys-time)@localhost>")
 
 (define *simple-popd*
@@ -75,7 +74,7 @@
                         (or (and-let*
                               ([ apop ]
                                [pass (assoc-ref *users* user)]
-                               [digest~ (%mkdigest #`"<,|apop|>,|pass|")]
+                               [digest~ (%mkdigest #`",|apop|,|pass|")]
                                [ (equal? digest digest~) ])
                               (display "+OK\r\n" out))
                             (display "-ERR authentication failed\r\n" out))
@@ -106,7 +105,20 @@
 (define conn (make-pop3-connection "localhost" :port *pop-port* :apop #t))
 (pop3-connect conn)
 
-(test* "apop timestamp" *apop-stamp* (ref conn 'stamp))
+(test* "auth ok" 'ok (guard (e (else 'ng))
+                       (pop3-auth conn "user" "pass")
+                       'ok))
+
+(test* "auth ng" (test-error <pop3-authentication-error>)
+       (pop3-auth conn "user" "bad password"))
+
+(test* "apop ok" 'ok (guard (e (else 'ng))
+                       (pop3-apop conn "user" "pass")
+                       'ok))
+
+(test* "apop ng" (test-error <pop3-authentication-error>)
+       (pop3-apop conn "user" "bad password"))
+
 
 (pop3-quit conn)
 

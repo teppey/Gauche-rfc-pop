@@ -143,7 +143,39 @@
     (single msgnum)
     (all)))
 
-;(define (pop3-retr conn))
+;; Return response line includes CRLF
+(define (read-message-chunk iport)
+  (let loop ((c (read-char iport))
+             (r '()))
+    (cond ((eof-object? c) c)
+          ((and (eqv? c #\return)
+                (eqv? (peek-char iport) #\newline))
+           (read-char iport) ;consume #\newline
+           (list->string (reverse! (list* #\newline #\return r))))
+          (else
+            (loop (read-char iport)
+                  (cons c r))))))
+
+(define (pop3-retr conn msgnum :optional (proc #f))
+  (let ([res (check-response (send-command conn "RETR ~d" msgnum))]
+        [iport (socket-input-port (ref conn 'socket))]
+        [sp #f])
+    (unless proc
+      (set! sp (open-output-string))
+      (set! proc (lambda (chunk) (display chunk sp))))
+
+    (let loop ([line (read-message-chunk iport)]
+               [size 0])
+      (cond [(eof-object? line)
+             (pop3-error <pop3-error> "unexpected EOF")]
+            [(#/^\.\r\n/ line)
+             (%logging #`"read message (,size bytes)")
+             (if sp (get-output-string sp) (undefined))]
+            [else
+              (proc (regexp-replace #/^\./ line ""))
+              (loop (read-message-chunk iport)
+                    (+ size (string-size line)))]))))
+
 ;(define (pop3-dele conn))
 ;(define (pop3-noop conn))
 ;(define (pop3-rset conn))

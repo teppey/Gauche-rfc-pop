@@ -193,21 +193,12 @@
   (let ([res (check-response (send-command conn "TOP ~d ~d" msgnum n))]
         [iport (socket-input-port (ref conn 'socket))]
         [sp #f])
-    (unless proc
-      (set! sp (open-output-string))
-      (set! proc (lambda (chunk) (display chunk sp))))
-
-    (let loop ([line (read-message-chunk iport)]
-               [size 0])
-      (cond [(eof-object? line)
-             (pop3-error <pop3-error> "unexpected EOF")]
-            [(#/^\.\r\n/ line)
-             (%logging #`"read message (,size bytes)")
-             (if sp (get-output-string sp) (undefined))]
-            [else
-              (proc (regexp-replace #/^\./ line ""))
-              (loop (read-message-chunk iport)
-                    (+ size (string-size line)))]))))
+    (if proc
+      (read-message proc iport)
+      (begin
+        (set! sp (open-output-string))
+        (read-message (lambda (chunk) (display chunk sp)) iport)
+        (get-output-string sp)))))
 
 ;(define (pop3-uidl conn))
 

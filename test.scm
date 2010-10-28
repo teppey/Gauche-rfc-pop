@@ -7,6 +7,7 @@
 (use gauche.test)
 (use gauche.process)
 (use gauche.net)
+(use srfi-1)
 (use srfi-13)
 (use util.list)
 
@@ -17,6 +18,15 @@
 (define *pop-port* 7011)
 (define *users* '(("user" . "pass")))
 (define *stamp* #`"<,(sys-getpid).,(sys-time)@localhost>")
+(define *retr-response* '("From: postmaster"
+                          "Content-Type: text/plain"
+                          "MIME-Version: 1.0"
+                          "Subject: Dummy"
+                          ""
+                          "line1"
+                          "line2"
+                          "line3"
+                          ".\r\n"))
 
 (define *simple-popd*
   `(
@@ -30,6 +40,7 @@
     (define *stamp* ,*stamp*)
     (define *user* #f)
     (define *list-response* "1 1\r\n2 2\r\n3 3\r\n4 4\r\n5 5\r\n.\r\n")
+    (define *retr-response* ',*retr-response*)
 
     (define %mkdigest
       (compose digest-hexify (pa$ digest-string <md5>)))
@@ -75,6 +86,20 @@
                           (display "+OK\r\n" out)
                           (display *list-response* out)))
                       (loop (read-line in)))]
+                [(#/^STAT/ line)
+                 (display "+OK 10 100\r\n" out)
+                 (loop (read-line in))]
+                [(#/^DELE\s*\d+$/ line)
+                 (display "+OK message marked for deletion\r\n" out)
+                 (loop (read-line in))]
+                [(#/^NOOP$/ line)
+                 (display "+OK done nothing\r\n" out)
+                 (loop (read-line in))]
+                [(#/^RETR\s*\d+$/ line)
+                 (let1 res (string-join *retr-response* "\r\n")
+                   (format out "+OK ~d bytes\r\n" (string-size res))
+                   (display res out))
+                 (loop (read-line in))]
                 [(#/^QUIT/ line)
                  (display "+OK bye\r\n" out)
                  (socket-close client)
@@ -120,6 +145,19 @@
 
 (test* "list without arg" '((1 . 1) (2 . 2) (3 . 3) (4 . 4) (5 . 5))
        (pop3-list conn))
+
+(test* "stat" '(10 . 100)
+       (receive (num size) (pop3-stat conn)
+         (cons num size)))
+
+(test-ok "dele" (pop3-dele conn 1))
+
+(test-ok "noop" (pop3-noop conn))
+
+(test* "retr" (string-append
+                (string-join (drop-right *retr-response* 1) "\r\n")
+                "\r\n")
+       (pop3-retr conn 1))
 
 (test-ok "quit" (pop3-quit conn))
 

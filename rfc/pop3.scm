@@ -156,8 +156,41 @@
             (loop (read-char iport)
                   (cons c r))))))
 
+(define (read-message proc iport)
+  (let loop ([line (read-message-chunk iport)]
+             [size 0])
+    (cond [(eof-object? line)
+           (pop3-error <pop3-error> "unexpected EOF")]
+          [(#/^\.\r\n/ line)
+           (%logging #`"read message (,size bytes)")
+           (undefined)]
+          [else
+            (proc (regexp-replace #/^\./ line ""))
+            (loop (read-message-chunk iport)
+                  (+ size (string-size line)))])))
+
 (define (pop3-retr conn msgnum :optional (proc #f))
   (let ([res (check-response (send-command conn "RETR ~d" msgnum))]
+        [iport (socket-input-port (ref conn 'socket))]
+        [sp #f])
+    (if proc
+      (read-message proc iport)
+      (begin
+        (set! sp (open-output-string))
+        (read-message (lambda (chunk) (display chunk sp)) iport)
+        (get-output-string sp)))))
+
+(define (pop3-dele conn msgnum)
+  (check-response (send-command conn "DELE ~d" msgnum)))
+
+(define (pop3-noop conn)
+  (check-response (send-command conn "NOOP")))
+
+(define (pop3-rset conn)
+  (check-response (send-command conn "RSET")))
+
+(define (pop3-top conn msgnum n :optional (proc #f))
+  (let ([res (check-response (send-command conn "TOP ~d ~d" msgnum n))]
         [iport (socket-input-port (ref conn 'socket))]
         [sp #f])
     (unless proc
@@ -176,16 +209,6 @@
               (loop (read-message-chunk iport)
                     (+ size (string-size line)))]))))
 
-(define (pop3-dele conn msgnum)
-  (check-response (send-command conn "DELE ~d" msgnum)))
-
-(define (pop3-noop conn)
-  (check-response (send-command conn "NOOP")))
-
-(define (pop3-rset conn)
-  (check-response (send-command conn "RSET")))
-
-;(define (pop3-top conn))
 ;(define (pop3-uidl conn))
 
 (provide "rfc/pop3")

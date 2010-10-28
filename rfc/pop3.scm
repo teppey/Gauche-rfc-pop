@@ -200,6 +200,29 @@
         (read-message (lambda (chunk) (display chunk sp)) iport)
         (get-output-string sp)))))
 
-;(define (pop3-uidl conn))
+(define (pop3-uidl conn :optional (msgnum #f))
+  (define (single msgnum)
+    (let1 res (check-response (send-command conn "UIDL ~d" msgnum))
+      (if-let1 m (#/^\+OK\s+\d+\s+(.+)$/ res)
+        (m 1)
+        (pop3-error <pop3-bad-response-error> "bad response: ~a" res))))
+  (define (all)
+    (let1 res (check-response (send-command conn "UIDL"))
+      (let loop ((line (read-line (socket-input-port (ref conn 'socket))))
+                 (r '()))
+        (cond
+          ((equal? line ".")
+           (reverse! r))
+          ((#/^(\d+)\s+(.+)$/ line)
+           => (lambda (m)
+                (loop (read-line (socket-input-port (ref conn 'socket)))
+                      (acons (string->number (m 1))
+                             (m 2)
+                             r))))
+          (else
+            (pop3-error <pop3-bad-response-error> "bad response: ~a" res))))))
+  (if msgnum
+    (single msgnum)
+    (all)))
 
 (provide "rfc/pop3")

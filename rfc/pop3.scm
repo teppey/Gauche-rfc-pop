@@ -176,7 +176,9 @@
               (loop (read-message-chunk iport)
                     (+ size (string-size line)))]))))
 
-;(define (pop3-dele conn))
+(define (pop3-dele conn msgnum)
+  (check-response (send-command conn "DELE ~d" msgnum)))
+
 ;(define (pop3-noop conn))
 ;(define (pop3-rset conn))
 ;(define (pop3-top conn))

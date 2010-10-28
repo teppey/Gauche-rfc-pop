@@ -26,10 +26,6 @@
           (thread-join! thread timeout)))
       (thunk))))
 
-(define (%logging message)
-  (display message (current-error-port))
-  (newline (current-error-port)))
-
 (define-constant *default-pop3-port* 110)
 (define-constant *connection-timeout* 30)
 
@@ -64,7 +60,6 @@
 ;                      :socket (make-client-socket 'inet host port)))
 ;                  *open-timeout* #f)
 ;      (unless conn (pop3-error "timeout"))
-;      (%logging #`"POP session started: ,|host|:,|port|")
 ;      (read-line (socket-input-port (ref conn 'socket))) ;read greeting
 ;      (unwind-protect (proc conn)
 ;        (pop3-quit conn)))))

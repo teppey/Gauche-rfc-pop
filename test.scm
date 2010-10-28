@@ -91,8 +91,7 @@
   (read-line (process-output pc)) ;handshake
   )
 
-(define conn (make-pop3-connection "localhost" :port *pop-port* :apop #t))
-(pop3-connect conn)
+(define conn (pop3-connect "localhost" *pop-port*))
 
 (test* "auth ok" 'ok (guard (e (else 'ng))
                        (pop3-auth conn "user" "pass")

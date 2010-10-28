@@ -39,24 +39,19 @@
 
 (define-class <pop3-connection> ()
   ((host   :init-keyword :host   :init-value #f)
-   (port   :init-keyword :port   :init-value *default-pop3-port*)
+   (port   :init-keyword :port   :init-value #f)
    (socket :init-keyword :socket :init-value #f)
    (apop   :init-keyword :apop   :init-value #f)
    (stamp  :init-value #f)))
 
-(define (make-pop3-connection host . options)
-  (let-keywords options ((port *default-pop3-port*)
-                         (apop #f))
-    (make <pop3-connection> :host host :port port :apop apop)))
-
-(define (pop3-connect conn)
-  (let ((host (ref conn 'host))
-        (port (ref conn 'port)))
-    (set! (ref conn 'socket) (make-client-socket 'inet host port))
+(define (pop3-connect host :optional (port *default-pop3-port*))
+  (rlet1 conn (make <pop3-connection>
+                :host host
+                :port port
+                :socket (make-client-socket 'inet host port))
     (let1 res (check-response (get-response conn))
       (and-let* ((m (#/<.*>/ res)))
-        (set! (ref conn 'stamp) (m)))
-      conn)))
+        (set! (ref conn 'stamp) (m))))))
 
 ;(define (call-with-pop3-connection proc host username password . options)
 ;  (let-keywords options ((port *default-pop3-port*)

@@ -16,7 +16,8 @@
 
 (define *pop-port* 7011)
 (define *users* '(("user" . "pass")))
-(define *stamp-base* #`",(sys-getpid).,(sys-time)@localhost")
+(define *ok-user* "user")
+(define *apop-stamp* #`"<,(sys-getpid).,(sys-time)@localhost>")
 
 (define *simple-popd*
   `(
@@ -27,7 +28,7 @@
 
     (define *pop-port* ,*pop-port*)
     (define *users* ',*users*)
-    (define *stamp-base* ,*stamp-base*)
+    (define *apop-stamp* ,*apop-stamp*)
     (define *user* #f)
 
     (define (%read-line iport)
@@ -49,7 +50,7 @@
              (in (socket-input-port client))
              (out (socket-output-port client)))
         (if apop
-          (display #`"+OK ready <,|apop|>\r\n" out)
+          (display #`"+OK ready ,|apop|\r\n" out)
           (display "OK+ ready\r\n" out))
         (let loop ((line (%read-line in)))
           (cond [(#/^USER (.+)\r\n/ line)
@@ -89,7 +90,7 @@
                   (sys-exit 1)]))))
 
     (define (main args)
-      (let ((apop *stamp-base*)
+      (let ((apop *apop-stamp*)
             (socket (make-server-socket 'inet *pop-port* :reuse-addr? #t)))
         (print "ready") (flush) ;handshake
         (pop-server socket apop)
@@ -102,11 +103,11 @@
   (read-line (process-output pc)) ;handshake
   )
 
-(define conn (make-pop3-connection "localhost" *pop-port*))
+(define conn (make-pop3-connection "localhost" :port *pop-port* :apop #t))
+(pop3-connect conn)
 
-(test* "greeting" "+OK" (and-let* ((res (get-response conn))
-                                   (m (#/^(\+OK).*$/ res)))
-                          (m 1)))
+(test* "apop timestamp" *apop-stamp* (ref conn 'stamp))
+
 (pop3-quit conn)
 
 (sys-waitpid -1)

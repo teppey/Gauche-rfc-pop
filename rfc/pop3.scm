@@ -5,6 +5,7 @@
 (define-module rfc.pop3
   (use gauche.net)
   (use gauche.logger)
+  (use gauche.threads)
   (use srfi-13)
   (use rfc.md5)
   (use util.digest)
@@ -12,23 +13,25 @@
   )
 (select-module rfc.pop3)
 
-;; http://d.hatena.ne.jp/rui314/20070322/p1
-(define (with-timeout proc sec default)
-  (let/cc k
-    (with-signal-handlers
-      ((SIGALRM (k default)))
-      (lambda ()
-        (dynamic-wind
-          (lambda () (sys-alarm sec))
-          (lambda () (proc))
-          (lambda () (sys-alarm 0)))))))
+;; from lib/net/client.scm
+(define (with-timeout timeout thunk . opt-handler)
+  (let1 handler (get-optional opt-handler (lambda () #f))
+    (if (and timeout (> timeout 0))
+      (let1 thread (make-thread thunk)
+        (thread-start! thread)
+        (guard (exc [(join-timeout-exception? exc)
+                     (thread-terminate! thread)
+                     (handler)]
+                    [else (raise exc)])
+          (thread-join! thread timeout)))
+      (thunk))))
 
 (define (%logging message)
   (display message (current-error-port))
   (newline (current-error-port)))
 
 (define-constant *default-pop3-port* 110)
-(define-constant *open-timeout* 30)
+(define-constant *connection-timeout* 30)
 
 (define-condition-type <pop3-error> <error> #f)
 (define-condition-type <pop3-authentication-error> <pop3-error> #f)
@@ -41,13 +44,15 @@
    (stamp  :init-value #f)))
 
 (define (pop3-connect host :optional (port *default-pop3-port*))
-  (rlet1 conn (make <pop3-connection>
-                :host host
-                :port port
-                :socket (make-client-socket 'inet host port))
-    (let1 res (check-response (get-response conn))
-      (and-let* ((m (#/<.*>/ res)))
-        (set! (ref conn 'stamp) (m))))))
+  (with-timeout *connection-timeout*
+    (lambda ()
+      (rlet1 conn (make <pop3-connection>
+                    :host host
+                    :port port
+                    :socket (make-client-socket 'inet host port))
+        (let1 res (check-response (get-response conn))
+          (and-let* ((m (#/<.*>/ res)))
+            (set! (ref conn 'stamp) (m))))))))
 
 ;(define (call-with-pop3-connection proc host username password . options)
 ;  (let-keywords options ((port *default-pop3-port*)

@@ -102,21 +102,19 @@
 
 (define conn (pop3-connect "localhost" *pop-port*))
 
-(test* "auth ok" 'ok (guard (e (else 'ng))
-                       (pop3-login conn "user" "pass")
-                       'ok))
+(define (test-ok comment response)
+  (test* comment "+OK" response string-prefix?))
+
+(test-ok "auth ok" (pop3-login conn "user" "pass"))
 (test* "auth ng" (test-error <pop3-authentication-error>)
        (pop3-login conn "user" "bad password"))
-(test* "apop ok" 'ok (guard (e (else 'ng))
-                       (pop3-login-apop conn "user" "pass")
-                       'ok))
+(test-ok "apop ok" (pop3-login-apop conn "user" "pass"))
 (test* "apop ng" (test-error <pop3-authentication-error>)
        (pop3-login-apop conn "user" "bad password"))
 (test* "list with arg" '((1 . 1)) (pop3-list conn 1))
 (test* "list without arg" '((1 . 1) (2 . 2) (3 . 3) (4 . 4) (5 . 5))
        (pop3-list conn))
-
-(pop3-quit conn)
+(test-ok "quit" (pop3-quit conn))
 
 (sys-waitpid -1)
 

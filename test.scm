@@ -102,6 +102,7 @@
 (define (test-ok comment response)
   (test* comment "+OK" response string-prefix?))
 
+(test* "timestamp" *stamp* (ref conn 'stamp))
 (test-ok "auth ok" (pop3-login conn "user" "pass"))
 (test* "auth ng" (test-error <pop3-authentication-error>)
        (pop3-login conn "user" "bad password"))

@@ -16,7 +16,7 @@
 
 (define *pop-port* 7011)
 (define *users* '(("user" . "pass")))
-(define *apop-stamp* #`"<,(sys-getpid).,(sys-time)@localhost>")
+(define *stamp* #`"<,(sys-getpid).,(sys-time)@localhost>")
 
 (define *simple-popd*
   `(
@@ -27,20 +27,18 @@
 
     (define *pop-port* ,*pop-port*)
     (define *users* ',*users*)
-    (define *apop-stamp* ,*apop-stamp*)
+    (define *stamp* ,*stamp*)
     (define *user* #f)
     (define *list-response* "1 1\r\n2 2\r\n3 3\r\n4 4\r\n5 5\r\n.\r\n")
 
     (define %mkdigest
       (compose digest-hexify (pa$ digest-string <md5>)))
 
-    (define (pop-server socket apop)
+    (define (pop-server socket)
       (let* ((client (socket-accept socket))
              (in (socket-input-port client))
              (out (socket-output-port client)))
-        (if apop
-          (display #`"+OK ready ,|apop|\r\n" out)
-          (display "OK+ ready\r\n" out))
+        (display #`"+OK ready ,|*stamp*|\r\n" out)
         (let loop ((line (read-line in)))
           (cond [(#/^USER (.+)/ line)
                  => (lambda (m)
@@ -62,9 +60,9 @@
                       (let ((user (m 1))
                             (digest (m 2)))
                         (or (and-let*
-                              ([ apop ]
+                              ([ *stamp* ]
                                [pass (assoc-ref *users* user)]
-                               [digest~ (%mkdigest #`",|apop|,|pass|")]
+                               [digest~ (%mkdigest #`",|*stamp*|,|pass|")]
                                [ (equal? digest digest~) ])
                               (display "+OK\r\n" out))
                             (display "-ERR authentication failed\r\n" out))
@@ -87,10 +85,9 @@
                   (sys-exit 1)]))))
 
     (define (main args)
-      (let ((apop *apop-stamp*)
-            (socket (make-server-socket 'inet *pop-port* :reuse-addr? #t)))
+      (let1 socket (make-server-socket 'inet *pop-port* :reuse-addr? #t)
         (print "ready") (flush) ;handshake
-        (pop-server socket apop)
+        (pop-server socket)
         0))
     ))
 

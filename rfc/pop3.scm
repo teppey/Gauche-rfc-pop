@@ -41,7 +41,6 @@
   ((host   :init-keyword :host   :init-value #f)
    (port   :init-keyword :port   :init-value #f)
    (socket :init-keyword :socket :init-value #f)
-   (apop   :init-keyword :apop   :init-value #f)
    (stamp  :init-value #f)))
 
 (define (pop3-connect host :optional (port *default-pop3-port*))
@@ -95,11 +94,11 @@
       (begin (socket-close s)
              (set! (ref conn 'socket) #f)))))
 
-(define (pop3-auth conn username password)
+(define (pop3-login conn username password)
   (check-response-auth (send-command conn "USER ~a" username))
   (check-response-auth (send-command conn "PASS ~a" password)))
 
-(define (pop3-apop conn username password)
+(define (pop3-login-apop conn username password)
   (unless (ref conn 'stamp)
     (pop3-error <pop3-authentication-error> "not APOP server; cannot login"))
   raise

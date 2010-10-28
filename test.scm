@@ -94,18 +94,18 @@
 (define conn (pop3-connect "localhost" *pop-port*))
 
 (test* "auth ok" 'ok (guard (e (else 'ng))
-                       (pop3-auth conn "user" "pass")
+                       (pop3-login conn "user" "pass")
                        'ok))
 
 (test* "auth ng" (test-error <pop3-authentication-error>)
-       (pop3-auth conn "user" "bad password"))
+       (pop3-login conn "user" "bad password"))
 
 (test* "apop ok" 'ok (guard (e (else 'ng))
-                       (pop3-apop conn "user" "pass")
+                       (pop3-login-apop conn "user" "pass")
                        'ok))
 
 (test* "apop ng" (test-error <pop3-authentication-error>)
-       (pop3-apop conn "user" "bad password"))
+       (pop3-login-apop conn "user" "bad password"))
 
 (pop3-quit conn)
 

@@ -91,10 +91,10 @@
 
 (define (pop3-quit conn)
   (unwind-protect
-    (send-command conn "QUIT")
-    (if-let1 s (ref conn 'socket)
-      (begin (socket-close s)
-             (set! (ref conn 'socket) #f)))))
+    (rlet1 res (check-response (send-command conn "QUIT"))
+      (socket-shutdown (ref conn 'socket) SHUT_WR))
+    (begin (socket-close (ref conn 'socket))
+           (set! (ref conn 'socket) #f))))
 
 (define (pop3-login conn username password)
   (check-response-auth (send-command conn "USER ~a" username))

@@ -34,9 +34,6 @@
 (define-condition-type <pop3-authentication-error> <pop3-error> #f)
 (define-condition-type <pop3-bad-response-error> <pop3-error> #f)
 
-(define (pop3-error condition message . args)
-  (apply error condition message args))
-
 (define-class <pop3-connection> ()
   ((host   :init-keyword :host   :init-value #f)
    (port   :init-keyword :port   :init-value #f)
@@ -80,12 +77,12 @@
 (define (check-response res)
   (if (response-ok? res)
     res
-    (pop3-error <pop3-bad-response-error> res)))
+    (error <pop3-bad-response-error> res)))
 
 (define (check-response-auth res)
   (if (response-ok? res)
     res
-    (pop3-error <pop3-authentication-error> res)))
+    (error <pop3-authentication-error> res)))
 
 (define (pop3-quit conn)
   (unwind-protect
@@ -100,8 +97,7 @@
 
 (define (pop3-login-apop conn username password)
   (unless (ref conn 'stamp)
-    (pop3-error <pop3-authentication-error> "not APOP server; cannot login"))
-  raise
+    (error <pop3-authentication-error> "not APOP server; cannot login"))
   (let1 digest (digest-hexify
                  (digest-string <md5> #`",(ref conn 'stamp),|password|"))
     (check-response-auth (send-command conn "APOP ~a ~a" username digest))))
@@ -110,14 +106,14 @@
   (let1 res (check-response (send-command conn "STAT"))
     (if-let1 m (#/^\+OK\s+(\d+)\s+(\d+)/ res)
       (values (string->number (m 1)) (string->number (m 2)))
-      (pop3-error <pop3-bad-response-error> "wrong response format: ~a" res))))
+      (error <pop3-bad-response-error> "wrong response format:" res))))
 
 (define (pop3-list conn :optional (msgnum #f))
   (define (single msgnum)
     (let1 res (check-response (send-command conn "LIST ~d" msgnum))
       (if-let1 m (#/^\+OK\s+(\d+)\s+(\d+)$/ res)
         (list (cons (string->number (m 1)) (string->number (m 2))))
-        (pop3-error <pop3-bad-response-error> "bad response: ~a" res))))
+        (error <pop3-bad-response-error> "bad response:" res))))
   (define (all)
     (let1 res (check-response (send-command conn "LIST"))
       (let loop ((line (read-line (socket-input-port (ref conn 'socket))))
@@ -132,7 +128,7 @@
                              (string->number (m 2))
                              r))))
           (else
-            (pop3-error <pop3-bad-response-error> "bad response: ~a" res))))))
+            (error <pop3-bad-response-error> "bad response:" res))))))
   (if msgnum
     (single msgnum)
     (all)))
@@ -154,7 +150,7 @@
   (let loop ([line (read-message-chunk iport)]
              [size 0])
     (cond [(eof-object? line)
-           (pop3-error <pop3-error> "unexpected EOF")]
+           (error <pop3-error> "unexpected EOF")]
           [(#/^\.\r\n/ line)
            (%logging #`"read message (,size bytes)")
            (undefined)]
@@ -199,7 +195,7 @@
     (let1 res (check-response (send-command conn "UIDL ~d" msgnum))
       (if-let1 m (#/^\+OK\s+\d+\s+(.+)$/ res)
         (m 1)
-        (pop3-error <pop3-bad-response-error> "bad response: ~a" res))))
+        (error <pop3-bad-response-error> "bad response:" res))))
   (define (all)
     (let1 res (check-response (send-command conn "UIDL"))
       (let loop ((line (read-line (socket-input-port (ref conn 'socket))))
@@ -214,7 +210,7 @@
                              (m 2)
                              r))))
           (else
-            (pop3-error <pop3-bad-response-error> "bad response: ~a" res))))))
+            (error <pop3-bad-response-error> "bad response:" res))))))
   (if msgnum
     (single msgnum)
     (all)))

@@ -42,7 +42,7 @@
    (port   :init-keyword :port   :init-value #f)
    (socket :init-keyword :socket :init-value #f)
    (apop   :init-keyword :apop   :init-value #f)
-   (stamp  :init-value #f)))
+   (greeting  :init-value #f)))
 
 (define (pop3-connect host :optional (port *default-pop3-port*))
   (rlet1 conn (make <pop3-connection>
@@ -51,7 +51,7 @@
                 :socket (make-client-socket 'inet host port))
     (let1 res (check-response (get-response conn))
       (and-let* ((m (#/<.*>/ res)))
-        (set! (ref conn 'stamp) (m))))))
+        (set! (ref conn 'greeting) (m))))))
 
 ;(define (call-with-pop3-connection proc host username password . options)
 ;  (let-keywords options ((port *default-pop3-port*)
@@ -100,11 +100,11 @@
   (check-response-auth (send-command conn "PASS ~a" password)))
 
 (define (pop3-apop conn username password)
-  (unless (ref conn 'stamp)
+  (unless (ref conn 'greeting)
     (pop3-error <pop3-authentication-error> "not APOP server; cannot login"))
   raise
   (let1 digest (digest-hexify
-                 (digest-string <md5> #`",(ref conn 'stamp),|password|"))
+                 (digest-string <md5> #`",(ref conn 'greeting),|password|"))
     (check-response-auth (send-command conn "APOP ~a ~a" username digest))))
 
 (define (pop3-stat conn)

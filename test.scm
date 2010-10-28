@@ -101,6 +101,16 @@
                    (format out "+OK ~d bytes\r\n" (string-size res))
                    (display res out))
                  (loop (read-line in))]
+                [(#/^UIDL\s*(.*)$/ line)
+                 => (lambda (m)
+                      (if (string->number (m 1))
+                        (format out "+OK ~a ~a\r\n" (m 1) (%mkdigest "foo"))
+                        (begin
+                          (display "+OK\r\n" out)
+                          (format out "1 ~a\r\n" (%mkdigest "foo"))
+                          (format out "2 ~a\r\n" (%mkdigest "bar"))
+                          (display ".\r\n" out)))
+                      (loop (read-line in)))]
                 [(#/^QUIT/ line)
                  (display "+OK bye\r\n" out)
                  (socket-close client)
@@ -164,6 +174,7 @@
                 (string-join (drop-right *retr-response* 1) "\r\n")
                 "\r\n")
        (pop3-top conn 1 1))
+
 
 (test-ok "quit" (pop3-quit conn))
 

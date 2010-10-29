@@ -31,7 +31,7 @@
 ;;;  SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 ;;;
 
-;;; RFC 1939 - Post Office Protocol - Version 3
+;;; RFC 1939    Post Office Protocol - Version 3
 ;;; http://tools.ietf.org/html/rfc1939
 
 (define-module rfc.pop3
@@ -81,20 +81,6 @@
         (let1 res (check-response (get-response conn))
           (and-let* ((m (#/<.*>/ res)))
             (set! (ref conn 'stamp) (m))))))))
-
-;(define (call-with-pop3-connection proc host username password . options)
-;  (let-keywords options ((port *default-pop3-port*)
-;                         (apop #f))
-;    (let1 conn (with-timeout
-;                  (lambda ()
-;                    (make <pop3-connection>
-;                      :apop apop
-;                      :socket (make-client-socket 'inet host port)))
-;                  *open-timeout* #f)
-;      (unless conn (pop3-error "timeout"))
-;      (read-line (socket-input-port (ref conn 'socket))) ;read greeting
-;      (unwind-protect (proc conn)
-;        (pop3-quit conn)))))
 
 (define (send-command conn fmt . args)
   (let1 out (socket-output-port (ref conn 'socket))
@@ -245,5 +231,10 @@
   (if msgnum
     (single msgnum)
     (all)))
+
+(define (call-with-pop3-connection host proc :key (port *default-pop3-port*))
+  (let1 conn (pop3-connect host port)
+    (unwind-protect (proc conn)
+      (pop3-quit conn))))
 
 (provide "rfc/pop3")

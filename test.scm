@@ -129,12 +129,14 @@
         0))
     ))
 
-;; Start test server
 (with-output-to-file "./testsrv.scm" (lambda () (for-each write *simple-popd*)))
-(let1 pc (run-process '("gosh" "./testsrv.scm") :output :pipe)
-  (read-line (process-output pc)) ;handshake
-  )
 
+(define (start-test-server)
+  (let1 pc (run-process '("gosh" "./testsrv.scm") :output :pipe)
+    (read-line (process-output pc)) ;handshake
+    ))
+
+(start-test-server)
 (define conn (pop3-connect "localhost" *pop-port*))
 
 (define (test-ok comment response)
@@ -187,8 +189,18 @@
        (pop3-uidl conn))
 
 (test-ok "quit" (pop3-quit conn))
-
 (sys-waitpid -1)
+
+
+(start-test-server)
+(test-ok "call-with-pop3-connection"
+         (call-with-pop3-connection "localhost"
+           (lambda (conn)
+             (pop3-login conn "user" "pass"))
+           :port *pop-port*))
+(sys-waitpid -1)
+
+
 
 ;; epilogue
 (test-end)

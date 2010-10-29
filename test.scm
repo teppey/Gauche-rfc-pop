@@ -10,6 +10,8 @@
 (use srfi-1)
 (use srfi-13)
 (use util.list)
+(use rfc.md5)
+(use util.digest)
 
 (test-start "rfc.pop3")
 (use rfc.pop3)
@@ -175,6 +177,14 @@
                 "\r\n")
        (pop3-top conn 1 1))
 
+(test* "uidl with arg" (cons 1 (digest-hexify (digest-string <md5> "foo")))
+       (receive (num unique-id) (pop3-uidl conn 1)
+         (cons num unique-id)))
+
+(test* "uidl without arg"
+       `((1 . ,(digest-hexify (digest-string <md5> "foo")))
+         (2 . ,(digest-hexify (digest-string <md5> "bar"))))
+       (pop3-uidl conn))
 
 (test-ok "quit" (pop3-quit conn))
 

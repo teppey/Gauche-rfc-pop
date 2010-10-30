@@ -203,7 +203,7 @@
 
 (define-method pop3-top ((conn <pop3-connection>) msgnum n . args)
   (let ([res (check-response (send-command conn "TOP ~d ~d" msgnum n))]
-        [iport (socket-input-port (ref conn 'socket))]
+        [iport (socket-input-port (socket-of conn))]
         [sp #f])
     (let1 proc (get-optional args #f)
       (if proc

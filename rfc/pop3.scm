@@ -112,24 +112,24 @@
     (begin (socket-close (socket-of conn))
            (set! (socket-of conn) #f))))
 
-(define (pop3-login conn username password)
+(define-method pop3-login ((conn <pop3-connection>) username password)
   (check-response-auth (send-command conn "USER ~a" username))
   (check-response-auth (send-command conn "PASS ~a" password)))
 
-(define (pop3-login-apop conn username password)
+(define-method pop3-login-apop ((conn <pop3-connection>) username password)
   (unless (ref conn 'stamp)
     (error <pop3-authentication-error> "not APOP server; cannot login"))
   (let1 digest (digest-hexify
                  (digest-string <md5> #`",(ref conn 'stamp),|password|"))
     (check-response-auth (send-command conn "APOP ~a ~a" username digest))))
 
-(define (pop3-stat conn)
+(define-method pop3-stat ((conn <pop3-connection>))
   (let1 res (check-response (send-command conn "STAT"))
     (if-let1 m (#/^\+OK\s+(\d+)\s+(\d+)/ res)
       (values (string->number (m 1)) (string->number (m 2)))
       (error <pop3-bad-response-error> "wrong response format:" res))))
 
-(define (pop3-list conn :optional (msgnum #f))
+(define-method pop3-list ((conn <pop3-connection>) . args)
   (define (single msgnum)
     (let1 res (check-response (send-command conn "LIST ~d" msgnum))
       (if-let1 m (#/^\+OK\s+(\d+)\s+(\d+)$/ res)
@@ -150,9 +150,10 @@
                              r))))
           (else
             (error <pop3-bad-response-error> "bad response:" res))))))
-  (if msgnum
-    (single msgnum)
-    (all)))
+  (let1 msgnum (get-optional args #f)
+    (if msgnum
+      (single msgnum)
+      (all))))
 
 ;; Return response line includes CRLF
 (define (read-message-chunk iport)

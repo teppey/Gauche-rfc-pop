@@ -83,7 +83,7 @@
     (lambda ()
       (set! (socket-of conn) (make-client-socket
                                'inet (host-of conn) (port-of conn)))
-        (let1 res (check-response (get-response conn))
+        (rlet1 res (check-response (get-response conn))
           (and-let* ((m (#/<.*>/ res)))
             (set! (ref conn 'stamp) (m)))))))
 

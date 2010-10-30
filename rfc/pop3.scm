@@ -201,16 +201,17 @@
 (define-method pop3-rset ((conn <pop3-connection>))
   (check-response (send-command conn "RSET")))
 
-(define (pop3-top conn msgnum n :optional (proc #f))
+(define-method pop3-top ((conn <pop3-connection>) msgnum n . args)
   (let ([res (check-response (send-command conn "TOP ~d ~d" msgnum n))]
         [iport (socket-input-port (ref conn 'socket))]
         [sp #f])
-    (if proc
-      (read-message proc iport)
-      (begin
-        (set! sp (open-output-string))
-        (read-message (lambda (chunk) (display chunk sp)) iport)
-        (get-output-string sp)))))
+    (let1 proc (get-optional args #f)
+      (if proc
+        (read-message proc iport)
+        (begin
+          (set! sp (open-output-string))
+          (read-message (lambda (chunk) (display chunk sp)) iport)
+          (get-output-string sp))))))
 
 (define (pop3-uidl conn :optional (msgnum #f))
   (define (single msgnum)

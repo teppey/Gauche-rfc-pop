@@ -60,10 +60,16 @@
 (define-constant *default-pop3-port* 110)
 (define-constant *default-connection-timeout* 30)
 
+;;----------------------------------------------------------
+;; Conditions
+;;
 (define-condition-type <pop3-error> <error> #f)
 (define-condition-type <pop3-authentication-error> <pop3-error> #f)
 (define-condition-type <pop3-bad-response-error> <pop3-error> #f)
 
+;;----------------------------------------------------------
+;; POP3 connection context
+;;
 (define-class <pop3-connection> ()
   ((host   :init-keyword :host   :init-value #f :accessor host-of)
    (port   :init-keyword :port   :init-value *default-pop3-port*
@@ -81,13 +87,13 @@
           (and-let* ((m (#/<.*>/ res)))
             (set! (ref conn 'stamp) (m)))))))
 
-(define (send-command conn fmt . args)
-  (let1 out (socket-output-port (ref conn 'socket))
+(define-method send-command ((conn <pop3-connection>) fmt . args)
+  (let1 out (socket-output-port (socket-of conn))
     (apply format out #`",|fmt|\r\n" args)
     (get-response conn)))
 
-(define (get-response conn)
-  (read-line (socket-input-port (ref conn 'socket))))
+(define-method get-response ((conn <pop3-connection>))
+  (read-line (socket-input-port (socket-of conn))))
 
 (define response-ok? (pa$ string-prefix? "+OK"))
 

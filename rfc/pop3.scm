@@ -172,7 +172,7 @@
   (let loop ([line (read-message-chunk iport)]
              [size 0])
     (cond [(eof-object? line)
-           (error <pop3-error> "unexpected EOF")]
+           (error <pop3-bad-response-error> "unexpected EOF")]
           [(#/^\.\r\n/ line)
            (undefined)]
           [else

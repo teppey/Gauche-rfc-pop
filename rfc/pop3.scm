@@ -244,10 +244,9 @@
 ;;
 
 ;; Port number
-;;  if `host' argument as "host:port", use host and port
+;;  if `host' argument is "host:port", use host and port
 ;;  if not above form, use :port keyword argument
 ;;  if :port keyword argument not given, use *default-pop3-port*
-;;  3. *default-pop3-port*
 (define (call-with-pop3-connection host username password proc . options)
   (define (ensure-host&port host port)
     (receive (host* port*) (string-scan host #\: 'both)

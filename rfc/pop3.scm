@@ -180,24 +180,25 @@
             (loop (read-message-chunk iport)
                   (+ size (string-size line)))])))
 
-(define (pop3-retr conn msgnum :optional (proc #f))
+(define-method pop3-retr ((conn <pop3-connection>) msgnum . args)
   (let ([res (check-response (send-command conn "RETR ~d" msgnum))]
-        [iport (socket-input-port (ref conn 'socket))]
+        [iport (socket-input-port (socket-of conn))]
         [sp #f])
-    (if proc
-      (read-message proc iport)
-      (begin
-        (set! sp (open-output-string))
-        (read-message (lambda (chunk) (display chunk sp)) iport)
-        (get-output-string sp)))))
+    (let1 proc (get-optional args #f)
+      (if proc
+        (read-message proc iport)
+        (begin
+          (set! sp (open-output-string))
+          (read-message (lambda (chunk) (display chunk sp)) iport)
+          (get-output-string sp))))))
 
-(define (pop3-dele conn msgnum)
+(define-method pop3-dele ((conn <pop3-connection>) msgnum)
   (check-response (send-command conn "DELE ~d" msgnum)))
 
-(define (pop3-noop conn)
+(define-method pop3-noop ((conn <pop3-connection>))
   (check-response (send-command conn "NOOP")))
 
-(define (pop3-rset conn)
+(define-method pop3-rset ((conn <pop3-connection>))
   (check-response (send-command conn "RSET")))
 
 (define (pop3-top conn msgnum n :optional (proc #f))

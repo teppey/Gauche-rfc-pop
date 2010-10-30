@@ -41,7 +41,24 @@
   (use srfi-13)
   (use rfc.md5)
   (use util.digest)
-  (export-all)
+  (export <pop3-error>
+          <pop3-authentication-error>
+          <pop3-bad-response-error>
+          <pop3-connection>
+          pop3-connect
+          pop3-quit
+          pop3-login
+          pop3-login-apop
+          pop3-stat
+          pop3-retr
+          pop3-top
+          pop3-dele
+          pop3-noop
+          pop3-rset
+          pop3-list
+          pop3-uidl
+          call-with-pop3-connection)
+  ;(export-all)
   )
 (select-module rfc.pop3)
 

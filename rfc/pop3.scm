@@ -241,11 +241,29 @@
 ;;----------------------------------------------------------
 ;; High Level API
 ;;
-(define (call-with-pop3-connection host proc :key (port *default-pop3-port*))
-  (let1 conn (make <pop3-connection> :host host :port port)
-    (pop3-connect conn)
-    (unwind-protect (proc conn)
-      (pop3-quit conn))))
+
+;; Port number
+;;  if `host' argument as "host:port", use host and port
+;;  if not above form, use :port keyword argument
+;;  if :port keyword argument not given, use *default-pop3-port*
+;;  3. *default-pop3-port*
+(define (call-with-pop3-connection host username password proc . options)
+  (define (ensure-host&port host port)
+    (receive (host* port*) (string-scan host #\: 'both)
+      (if (and host* port*)
+        (values host* (string->number port*))
+        (values host port))))
+  (let-keywords options ([port *default-pop3-port*]
+                         [apop #f])
+    (receive (host port) (ensure-host&port host port)
+      (let1 conn (make <pop3-connection> :host host :port port)
+        (pop3-connect conn)
+        (unwind-protect
+          (begin (if apop
+                   (pop3-login-apop conn username password)
+                   (pop3-login conn username password))
+                 (proc conn))
+          (pop3-quit conn))))))
 
 
 (provide "rfc/pop3")

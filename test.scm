@@ -136,12 +136,13 @@
     (read-line (process-output pc)) ;handshake
     ))
 
+(define (test-ok comment response)
+  (test* comment "+OK" response string-prefix?))
+
 (start-test-server)
 (define conn (make <pop3-connection> :host "localhost" :port *pop-port*))
 (pop3-connect conn)
 
-(define (test-ok comment response)
-  (test* comment "+OK" response string-prefix?))
 
 (test* "timestamp" *stamp* (ref conn 'stamp))
 
@@ -195,10 +196,16 @@
 
 (start-test-server)
 (test-ok "call-with-pop3-connection"
-         (call-with-pop3-connection "localhost"
-           (lambda (conn)
-             (pop3-login conn "user" "pass"))
+         (call-with-pop3-connection "localhost" "user" "pass"
+           (lambda (conn) (pop3-noop conn))
            :port *pop-port*))
+(sys-waitpid -1)
+
+(start-test-server)
+(test-ok "call-with-pop3-connection host:port"
+         (call-with-pop3-connection #`"localhost:,*pop-port*" "user" "pass"
+           (lambda (conn) (pop3-noop conn))
+           :port (+ *pop-port* 1)))
 (sys-waitpid -1)
 
 

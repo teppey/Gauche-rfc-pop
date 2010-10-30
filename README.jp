@@ -1,0 +1,40 @@
+Module rfc.pop3
+===============
+
+このモジュールはRFC1939で定義されているPOP3(Post Office Protocol - Version3)プロトコルのクライアントAPIを提供します。
+
+[RFC1939] http://www.ietf.org/rfc/rfc1939.txt
+
+Condition Type: <pop3-error>
+
+Condition Type: <pop3-authentication-error>
+
+Condition Type: <pop3-bad-response-error>
+
+Class: <pop3-connection>
+
+Function: call-with-pop3-connection host proc &keyword port username password
+
+Method: pop3-connect conn
+
+Method: pop3-quit conn
+
+Method: pop3-login conn username password
+
+Method: pop3-login-apop conn username password
+
+Method: pop3-stat conn
+
+Method: pop3-retr conn msgnum &keyword sink flusher
+
+Method: pop3-top conn msgnum nlines &keyword sink flusher
+
+Method: pop3-dele conn msgnum
+
+Method: pop3-noop conn
+
+Method: pop3-rset conn
+
+Method: pop3-list &optional msgnum
+
+Method: pop3-uidl &optional msgnum

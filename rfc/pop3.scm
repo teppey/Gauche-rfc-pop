@@ -36,7 +36,6 @@
 
 (define-module rfc.pop3
   (use gauche.net)
-  (use gauche.logger)
   (use gauche.threads)
   (use srfi-13)
   (use rfc.md5)

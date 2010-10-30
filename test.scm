@@ -137,7 +137,8 @@
     ))
 
 (start-test-server)
-(define conn (pop3-connect "localhost" *pop-port*))
+(define conn (make <pop3-connection> :host "localhost" :port *pop-port*))
+(pop3-connect conn)
 
 (define (test-ok comment response)
   (test* comment "+OK" response string-prefix?))

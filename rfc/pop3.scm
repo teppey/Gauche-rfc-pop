@@ -59,28 +59,28 @@
       (thunk))))
 
 (define-constant *default-pop3-port* 110)
-(define-constant *connection-timeout* 30)
+(define-constant *default-connection-timeout* 30)
 
 (define-condition-type <pop3-error> <error> #f)
 (define-condition-type <pop3-authentication-error> <pop3-error> #f)
 (define-condition-type <pop3-bad-response-error> <pop3-error> #f)
 
 (define-class <pop3-connection> ()
-  ((host   :init-keyword :host   :init-value #f)
-   (port   :init-keyword :port   :init-value #f)
-   (socket :init-keyword :socket :init-value #f)
+  ((host   :init-keyword :host   :init-value #f :accessor host-of)
+   (port   :init-keyword :port   :init-value *default-pop3-port*
+           :accessor port-of)
+   (socket :init-keyword :socket :init-value #f :accessor socket-of)
+   (timeout :init-keyword :timeout :init-value *default-connection-timeout*)
    (stamp  :init-value #f)))
 
-(define (pop3-connect host :optional (port *default-pop3-port*))
-  (with-timeout *connection-timeout*
+(define-method pop3-connect ((conn <pop3-connection>))
+  (with-timeout (ref conn 'timeout)
     (lambda ()
-      (rlet1 conn (make <pop3-connection>
-                    :host host
-                    :port port
-                    :socket (make-client-socket 'inet host port))
+      (set! (socket-of conn) (make-client-socket
+                               'inet (host-of conn) (port-of conn)))
         (let1 res (check-response (get-response conn))
           (and-let* ((m (#/<.*>/ res)))
-            (set! (ref conn 'stamp) (m))))))))
+            (set! (ref conn 'stamp) (m)))))))
 
 (define (send-command conn fmt . args)
   (let1 out (socket-output-port (ref conn 'socket))
@@ -233,7 +233,8 @@
     (all)))
 
 (define (call-with-pop3-connection host proc :key (port *default-pop3-port*))
-  (let1 conn (pop3-connect host port)
+  (let1 conn (make <pop3-connection> :host host :port port)
+    (pop3-connect conn)
     (unwind-protect (proc conn)
       (pop3-quit conn))))
 

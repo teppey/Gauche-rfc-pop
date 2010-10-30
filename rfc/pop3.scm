@@ -155,42 +155,44 @@
       (single msgnum)
       (all))))
 
-;; Return response line includes CRLF
+;; Return response a line includes CRLF
 (define (read-message-chunk iport)
-  (let loop ((c (read-char iport))
-             (r '()))
-    (cond ((eof-object? c) c)
-          ((and (eqv? c #\return)
+  (let loop ([c (read-char iport)]
+             [r '()])
+    (cond [(eof-object? c) c]
+          [(and (eqv? c #\return)
                 (eqv? (peek-char iport) #\newline))
-           (read-char iport) ;consume #\newline
-           (list->string (reverse! (list* #\newline #\return r))))
-          (else
-            (loop (read-char iport)
-                  (cons c r))))))
-
-(define (read-message proc iport)
-  (let loop ([line (read-message-chunk iport)]
-             [size 0])
-    (cond [(eof-object? line)
-           (error <pop3-bad-response-error> "unexpected EOF")]
-          [(#/^\.\r\n/ line)
-           (undefined)]
+           (list->string (reverse! (list* (read-char iport) c r)))]
           [else
-            (proc (regexp-replace #/^\./ line ""))
+            (loop (read-char iport)
+                  (cons c r))])))
+
+(define (read-message iport oport flusher)
+  (let loop ([chunk (read-message-chunk iport)]
+             [size 0])
+    (cond [(eof-object? chunk)
+           (error <pop3-bad-response-error> "unexpected EOF")]
+          [(#/^\.\r\n/ chunk)
+           (flusher oport size)]
+          [else
+            (display (regexp-replace #/^\./ chunk "") oport)
             (loop (read-message-chunk iport)
-                  (+ size (string-size line)))])))
+                  (+ size (string-size chunk)))])))
+
+(define (sink&flusher . args)
+  (let-keywords args ([sink (open-output-string)]
+                      [flusher (lambda (sink size) (get-output-string sink))])
+    (values sink flusher)))
 
 (define-method pop3-retr ((conn <pop3-connection>) msgnum . args)
-  (let ([res (check-response (send-command conn "RETR ~d" msgnum))]
-        [iport (socket-input-port (socket-of conn))]
-        [sp #f])
-    (let1 proc (get-optional args #f)
-      (if proc
-        (read-message proc iport)
-        (begin
-          (set! sp (open-output-string))
-          (read-message (lambda (chunk) (display chunk sp)) iport)
-          (get-output-string sp))))))
+  (receive (sink flusher) (apply sink&flusher args)
+    (check-response (send-command conn "RETR ~d" msgnum))
+    (read-message (socket-input-port (socket-of conn)) sink flusher)))
+
+(define-method pop3-top ((conn <pop3-connection>) msgnum nlines . args)
+  (receive (sink flusher) (apply sink&flusher args)
+    (check-response (send-command conn "TOP ~d ~d" msgnum nlines))
+    (read-message (socket-input-port (socket-of conn)) sink flusher)))
 
 (define-method pop3-dele ((conn <pop3-connection>) msgnum)
   (check-response (send-command conn "DELE ~d" msgnum)))
@@ -200,18 +202,6 @@
 
 (define-method pop3-rset ((conn <pop3-connection>))
   (check-response (send-command conn "RSET")))
-
-(define-method pop3-top ((conn <pop3-connection>) msgnum lines . args)
-  (let ([res (check-response (send-command conn "TOP ~d ~d" msgnum lines))]
-        [iport (socket-input-port (socket-of conn))]
-        [sp #f])
-    (let1 proc (get-optional args #f)
-      (if proc
-        (read-message proc iport)
-        (begin
-          (set! sp (open-output-string))
-          (read-message (lambda (chunk) (display chunk sp)) iport)
-          (get-output-string sp))))))
 
 (define-method pop3-uidl ((conn <pop3-connection>) . args)
   (define (single msgnum)

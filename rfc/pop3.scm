@@ -37,6 +37,7 @@
 (define-module rfc.pop3
   (use gauche.net)
   (use gauche.threads)
+  (use srfi-1)
   (use srfi-13)
   (use rfc.md5)
   (use util.digest)
@@ -156,7 +157,7 @@
       (all))))
 
 ;; Return response a line includes CRLF
-(define (read-message-chunk iport)
+(define (read-response-line iport)
   (let loop ([c (read-char iport)]
              [r '()])
     (cond [(eof-object? c) c]
@@ -167,17 +168,17 @@
             (loop (read-char iport)
                   (cons c r))])))
 
-(define (read-message iport oport flusher)
-  (let loop ([chunk (read-message-chunk iport)]
+(define (read-response-lines iport oport flusher)
+  (let loop ([line (read-response-line iport)]
              [size 0])
-    (cond [(eof-object? chunk)
+    (cond [(eof-object? line)
            (error <pop3-bad-response-error> "unexpected EOF")]
-          [(#/^\.\r\n/ chunk)
+          [(#/^\.\r\n/ line)
            (flusher oport size)]
           [else
-            (display (regexp-replace #/^\./ chunk "") oport)
-            (loop (read-message-chunk iport)
-                  (+ size (string-size chunk)))])))
+            (display (regexp-replace #/^\./ line "") oport)
+            (loop (read-response-line iport)
+                  (+ size (string-size line)))])))
 
 (define (sink&flusher . args)
   (let-keywords args ([sink (open-output-string)]
@@ -187,12 +188,12 @@
 (define-method pop3-retr ((conn <pop3-connection>) msgnum . args)
   (receive (sink flusher) (apply sink&flusher args)
     (check-response (send-command conn "RETR ~d" msgnum))
-    (read-message (socket-input-port (socket-of conn)) sink flusher)))
+    (read-response-lines (socket-input-port (socket-of conn)) sink flusher)))
 
 (define-method pop3-top ((conn <pop3-connection>) msgnum nlines . args)
   (receive (sink flusher) (apply sink&flusher args)
     (check-response (send-command conn "TOP ~d ~d" msgnum nlines))
-    (read-message (socket-input-port (socket-of conn)) sink flusher)))
+    (read-response-lines (socket-input-port (socket-of conn)) sink flusher)))
 
 (define-method pop3-dele ((conn <pop3-connection>) msgnum)
   (check-response (send-command conn "DELE ~d" msgnum)))
@@ -209,25 +210,19 @@
       (if-let1 m (#/^\+OK\s+(\d)+\s+(.+)$/ res)
         (values (string->number (m 1)) (m 2))
         (error <pop3-bad-response-error> "bad response:" res))))
-  (define (all)
-    (let1 res (check-response (send-command conn "UIDL"))
-      (let loop ((line (read-line (socket-input-port (ref conn 'socket))))
-                 (r '()))
-        (cond
-          ((equal? line ".")
-           (reverse! r))
-          ((#/^(\d+)\s+(.+)$/ line)
-           => (lambda (m)
-                (loop (read-line (socket-input-port (ref conn 'socket)))
-                      (acons (string->number (m 1))
-                             (m 2)
-                             r))))
-          (else
-            (error <pop3-bad-response-error> "bad response:" res))))))
+  (define (multi)
+    (check-response (send-command conn "UIDL"))
+    (receive (sink flusher) (sink&flusher)
+      (let* ([iport (socket-input-port (socket-of conn))]
+             [lines (read-response-lines iport sink flusher)])
+        (filter-map (lambda (line)
+                      (and-let* ([(not (string-null? line))]
+                                 [m (#/^(\d+)\s+(.+)$/ line)])
+                        (cons (string->number (m 1)) (m 2))))
+                    (string-split lines #/\r?\n/)))))
+
   (let1 msgnum (get-optional args #f)
-    (if msgnum
-      (single msgnum)
-      (all))))
+    (if msgnum (single msgnum) (multi))))
 
 (define (call-with-pop3-connection host proc :key (port *default-pop3-port*))
   (let1 conn (make <pop3-connection> :host host :port port)

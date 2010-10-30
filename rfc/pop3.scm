@@ -201,8 +201,8 @@
 (define-method pop3-rset ((conn <pop3-connection>))
   (check-response (send-command conn "RSET")))
 
-(define-method pop3-top ((conn <pop3-connection>) msgnum n . args)
-  (let ([res (check-response (send-command conn "TOP ~d ~d" msgnum n))]
+(define-method pop3-top ((conn <pop3-connection>) msgnum lines . args)
+  (let ([res (check-response (send-command conn "TOP ~d ~d" msgnum lines))]
         [iport (socket-input-port (socket-of conn))]
         [sp #f])
     (let1 proc (get-optional args #f)

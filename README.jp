@@ -7,6 +7,8 @@ Module rfc.pop3
 
 Condition Type: <pop3-error>
 
+Condition Type: <pop3-timeout-error>
+
 Condition Type: <pop3-authentication-error>
 
 Condition Type: <pop3-bad-response-error>
@@ -25,7 +27,7 @@ Class: <pop3-connection>
 
   Instance Variable of <pop3-connection>: timeout
 
-    接続時に待つ最大秒数。この秒数が経過しても接続できなければエラーが発生します。
+    接続時に待つ最大秒数。この秒数が経過しても接続できなければ<pop3-timeout-error>コンディションが発生します。
 
 
 Function: call-with-pop3-connection host username password proc &keyword port apop

@@ -42,6 +42,7 @@
   (use rfc.md5)
   (use util.digest)
   (export <pop3-error>
+          <pop3-timeout-error>
           <pop3-authentication-error>
           <pop3-bad-response-error>
           <pop3-connection>
@@ -87,6 +88,7 @@
 ;; Conditions
 ;;
 (define-condition-type <pop3-error> <error> #f)
+(define-condition-type <pop3-timeout-error> <pop3-error> #f)
 (define-condition-type <pop3-authentication-error> <pop3-error> #f)
 (define-condition-type <pop3-bad-response-error> <pop3-error> #f)
 
@@ -108,7 +110,10 @@
                                'inet (host-of conn) (port-of conn)))
         (rlet1 res (check-response (get-response conn))
           (and-let* ((m (#/<.*>/ res)))
-            (set! (ref conn 'stamp) (m)))))))
+            (set! (ref conn 'stamp) (m)))))
+    (lambda ()
+      (error <pop3-timeout-error>
+             "cannot connect server; connection timeout"))))
 
 (define-method send-command ((conn <pop3-connection>) fmt . args)
   (let1 out (socket-output-port (socket-of conn))

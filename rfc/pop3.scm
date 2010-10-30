@@ -130,32 +130,6 @@
       (values (string->number (m 1)) (string->number (m 2)))
       (error <pop3-bad-response-error> "wrong response format:" res))))
 
-(define-method pop3-list ((conn <pop3-connection>) . args)
-  (define (single msgnum)
-    (let1 res (check-response (send-command conn "LIST ~d" msgnum))
-      (if-let1 m (#/^\+OK\s+(\d+)\s+(\d+)$/ res)
-        (values (string->number (m 1)) (string->number (m 2)))
-        (error <pop3-bad-response-error> "bad response:" res))))
-  (define (all)
-    (let1 res (check-response (send-command conn "LIST"))
-      (let loop ((line (read-line (socket-input-port (ref conn 'socket))))
-                 (r '()))
-        (cond
-          ((equal? line ".")
-           (reverse! r))
-          ((#/^(\d+)\s+(\d+)$/ line)
-           => (lambda (m)
-                (loop (read-line (socket-input-port (ref conn 'socket)))
-                      (acons (string->number (m 1))
-                             (string->number (m 2))
-                             r))))
-          (else
-            (error <pop3-bad-response-error> "bad response:" res))))))
-  (let1 msgnum (get-optional args #f)
-    (if msgnum
-      (single msgnum)
-      (all))))
-
 ;; Return response a line includes CRLF
 (define (read-response-line iport)
   (let loop ([c (read-char iport)]
@@ -204,6 +178,25 @@
 (define-method pop3-rset ((conn <pop3-connection>))
   (check-response (send-command conn "RSET")))
 
+(define-method pop3-list ((conn <pop3-connection>) . args)
+  (define (single msgnum)
+    (let1 res (check-response (send-command conn "LIST ~d" msgnum))
+      (if-let1 m (#/^\+OK\s+(\d+)\s+(\d+)$/ res)
+        (values (string->number (m 1)) (string->number (m 2)))
+        (error <pop3-bad-response-error> "bad response:" res))))
+  (define (multi)
+    (check-response (send-command conn "LIST"))
+    (receive (sink flusher) (sink&flusher)
+      (let* ([iport (socket-input-port (socket-of conn))]
+             [lines (read-response-lines iport sink flusher)])
+        (filter-map (lambda (line)
+                      (and-let* ([(not (string-null? line))]
+                                 [m (#/^(\d+)\s+(\d+)$/ line)])
+                        (cons (string->number (m 1)) (string->number (m 2)))))
+                    (string-split lines #/\r?\n/)))))
+  (let1 msgnum (get-optional args #f)
+    (if msgnum (single msgnum) (multi))))
+
 (define-method pop3-uidl ((conn <pop3-connection>) . args)
   (define (single msgnum)
     (let1 res (check-response (send-command conn "UIDL ~d" msgnum))
@@ -220,7 +213,6 @@
                                  [m (#/^(\d+)\s+(.+)$/ line)])
                         (cons (string->number (m 1)) (m 2))))
                     (string-split lines #/\r?\n/)))))
-
   (let1 msgnum (get-optional args #f)
     (if msgnum (single msgnum) (multi))))
 
@@ -229,5 +221,6 @@
     (pop3-connect conn)
     (unwind-protect (proc conn)
       (pop3-quit conn))))
+
 
 (provide "rfc/pop3")

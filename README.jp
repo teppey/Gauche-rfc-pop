@@ -13,7 +13,7 @@ Condition Type: <pop3-bad-response-error>
 
 Class: <pop3-connection>
 
-Function: call-with-pop3-connection host proc &keyword port username password
+Function: call-with-pop3-connection host username password proc &keyword port apop
 
 Method: pop3-connect conn
 

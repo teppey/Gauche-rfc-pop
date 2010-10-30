@@ -213,7 +213,7 @@
           (read-message (lambda (chunk) (display chunk sp)) iport)
           (get-output-string sp))))))
 
-(define (pop3-uidl conn :optional (msgnum #f))
+(define-method pop3-uidl ((conn <pop3-connection>) . args)
   (define (single msgnum)
     (let1 res (check-response (send-command conn "UIDL ~d" msgnum))
       (if-let1 m (#/^\+OK\s+(\d)+\s+(.+)$/ res)
@@ -234,9 +234,10 @@
                              r))))
           (else
             (error <pop3-bad-response-error> "bad response:" res))))))
-  (if msgnum
-    (single msgnum)
-    (all)))
+  (let1 msgnum (get-optional args #f)
+    (if msgnum
+      (single msgnum)
+      (all))))
 
 (define (call-with-pop3-connection host proc :key (port *default-pop3-port*))
   (let1 conn (make <pop3-connection> :host host :port port)

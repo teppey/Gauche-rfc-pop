@@ -95,17 +95,15 @@
 (define-method get-response ((conn <pop3-connection>))
   (read-line (socket-input-port (socket-of conn))))
 
-(define response-ok? (pa$ string-prefix? "+OK"))
-
-(define (check-response res)
-  (if (response-ok? res)
-    res
-    (error <pop3-bad-response-error> res)))
-
-(define (check-response-auth res)
-  (if (response-ok? res)
-    res
-    (error <pop3-authentication-error> res)))
+(define-values (check-response check-response-auth)
+  (let-syntax
+    ([checker (syntax-rules ()
+                [(_ condition)
+                 (lambda (res)
+                   (or (and (string-prefix? "+OK" res) res)
+                       (error condition res)))])])
+    (values (checker <pop3-bad-response-error>)
+            (checker <pop3-authentication-error>))))
 
 (define (pop3-quit conn)
   (unwind-protect

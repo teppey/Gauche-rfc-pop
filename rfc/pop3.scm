@@ -105,12 +105,12 @@
     (values (checker <pop3-bad-response-error>)
             (checker <pop3-authentication-error>))))
 
-(define (pop3-quit conn)
+(define-method pop3-quit ((conn <pop3-connection>))
   (unwind-protect
     (rlet1 res (check-response (send-command conn "QUIT"))
-      (socket-shutdown (ref conn 'socket) SHUT_WR))
-    (begin (socket-close (ref conn 'socket))
-           (set! (ref conn 'socket) #f))))
+      (socket-shutdown (socket-of conn) SHUT_WR))
+    (begin (socket-close (socket-of conn))
+           (set! (socket-of conn) #f))))
 
 (define (pop3-login conn username password)
   (check-response-auth (send-command conn "USER ~a" username))

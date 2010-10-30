@@ -13,28 +13,61 @@ Condition Type: <pop3-bad-response-error>
 
 Class: <pop3-connection>
 
+  POP3サーバーへの接続を保持するオブジェクト。以下の公開スロットがあります。
+
+  Instance Variable of <pop3-connection>: host
+
+    POP3サーバーのホスト名。
+
+  Instance Variable of <pop3-connection>: port
+
+    POP3サーバーのポート番号。
+
+  Instance Variable of <pop3-connection>: timeout
+
+    接続時に待つ最大秒数。この秒数が経過しても接続できなければエラーが発生します。
+
+
 Function: call-with-pop3-connection host username password proc &keyword port apop
 
-Method: pop3-connect conn
+Method: pop3-connect (conn <pop3-connection>)
 
-Method: pop3-quit conn
+  POP3サーバに接続します。
 
-Method: pop3-login conn username password
+Method: pop3-quit (conn <pop3-connection>)
 
-Method: pop3-login-apop conn username password
+  POP3サーバから切断します。
 
-Method: pop3-stat conn
+Method: pop3-login (conn <pop3-connection>) username password
 
-Method: pop3-retr conn msgnum &keyword sink flusher
+  USERコマンドおよびPASSコマンドを使用してPOP3サーバにログインします。
+  ログインに失敗すると<pop3-authentication-error>コンディションが発生します。
 
-Method: pop3-top conn msgnum nlines &keyword sink flusher
+Method: pop3-login-apop (conn <pop3-connection>) username password
 
-Method: pop3-dele conn msgnum
+  APOPコマンドを使用してPOP3サーバにログインします。
+  ログインに失敗すると<pop3-authentication-error>コンディションが発生します。
 
-Method: pop3-noop conn
+Method: pop3-stat (conn <pop3-connection>)
 
-Method: pop3-rset conn
+  このメソッドはPOP3サーバ上のメール数とサイズの2つの値を返します。
 
-Method: pop3-list &optional msgnum
+Method: pop3-retr (conn <pop3-connection>) msgnum &keyword sink flusher
 
-Method: pop3-uidl &optional msgnum
+  msgnum番のメールを取得して文字列で返します。
+
+Method: pop3-top (conn <pop3-connection>) msgnum nlines &keyword sink flusher
+
+  msgnum番のメールの内容をnlines行取得して文字列で返します。
+
+Method: pop3-dele (conn <pop3-connection>) msgnum
+
+Method: pop3-noop (conn <pop3-connection>)
+
+Method: pop3-rset (conn <pop3-connection>)
+
+Method: pop3-list (conn <pop3-connection>) &optional msgnum
+
+  msgnum引数が指定されたときは、msgnum番のメール番号およびメールサイズの2つの値を返します。そうでなければメール番号とメールサイズの連想リストが返ります。
+
+Method: pop3-uidl (conn <pop3-connection>) &optional msgnum

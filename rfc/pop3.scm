@@ -45,6 +45,11 @@
           <pop3-authentication-error>
           <pop3-bad-response-error>
           <pop3-connection>
+
+          ; High level API
+          call-with-pop3-connection
+
+          ; Low level API
           pop3-connect
           pop3-quit
           pop3-login
@@ -57,7 +62,7 @@
           pop3-rset
           pop3-list
           pop3-uidl
-          call-with-pop3-connection)
+          )
   ;(export-all)
   )
 (select-module rfc.pop3)
@@ -233,6 +238,9 @@
   (let1 msgnum (get-optional args #f)
     (if msgnum (single msgnum) (multi))))
 
+;;----------------------------------------------------------
+;; High Level API
+;;
 (define (call-with-pop3-connection host proc :key (port *default-pop3-port*))
   (let1 conn (make <pop3-connection> :host host :port port)
     (pop3-connect conn)

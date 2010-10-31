@@ -180,7 +180,8 @@
 (test* "top" (string-append
                 (string-join (drop-right *retr-response* 1) "\r\n")
                 "\r\n")
-       (pop3-top conn 1 1))
+       (with-output-to-string
+         (lambda () (pop3-top conn 1 1))))
 
 (test* "uidl with arg" (cons 1 (digest-hexify (digest-string <md5> "foo")))
        (receive (num unique-id) (pop3-uidl conn 1)

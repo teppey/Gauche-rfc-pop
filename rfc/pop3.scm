@@ -186,10 +186,12 @@
                       [flusher (lambda (sink size) (get-output-string sink))])
     (values sink flusher)))
 
-(define-method pop3-retr ((conn <pop3-connection>) msgnum . args)
-  (receive (sink flusher) (apply sink&flusher args)
-    (check-response (send-command conn "RETR ~d" msgnum))
-    (read-response-lines (socket-input-port (socket-of conn)) sink flusher)))
+(define-method pop3-retr ((conn <pop3-connection>) msgnum)
+  (rlet1 res (check-response (send-command conn "RETR ~d" msgnum))
+    (read-response-lines
+      (socket-input-port (socket-of conn))
+      (current-output-port)
+      (lambda _ ))))
 
 (define-method pop3-top ((conn <pop3-connection>) msgnum nlines . args)
   (receive (sink flusher) (apply sink&flusher args)

@@ -174,7 +174,8 @@
 (test* "retr" (string-append
                 (string-join (drop-right *retr-response* 1) "\r\n")
                 "\r\n")
-       (pop3-retr conn 1))
+       (with-output-to-string
+         (lambda () (pop3-retr conn 1))))
 
 (test* "top" (string-append
                 (string-join (drop-right *retr-response* 1) "\r\n")

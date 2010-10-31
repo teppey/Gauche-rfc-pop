@@ -68,23 +68,8 @@
   )
 (select-module rfc.pop3)
 
-;; from lib/net/client.scm
-(define (with-timeout timeout thunk . opt-handler)
-  (let1 handler (get-optional opt-handler (lambda () #f))
-    (if (and timeout (> timeout 0))
-      (let1 thread (make-thread thunk)
-        (thread-start! thread)
-        (guard (exc [(join-timeout-exception? exc)
-                     (thread-terminate! thread)
-                     (handler)]
-                    [else (raise exc)])
-          (thread-join! thread timeout)))
-      (thunk))))
 
-(define-constant *default-pop3-port* 110)
-(define-constant *default-connection-timeout* 30)
-
-;;----------------------------------------------------------
+;;----------------------------------------------------------------------
 ;; Conditions
 ;;
 (define-condition-type <pop3-error> <error> #f)
@@ -92,9 +77,13 @@
 (define-condition-type <pop3-authentication-error> <pop3-error> #f)
 (define-condition-type <pop3-bad-response-error> <pop3-error> #f)
 
-;;----------------------------------------------------------
+
+;;----------------------------------------------------------------------
 ;; POP3 connection context
 ;;
+(define-constant *default-pop3-port* 110)
+(define-constant *default-connection-timeout* 30)
+
 (define-class <pop3-connection> ()
   ((host   :init-keyword :host   :init-value #f :accessor host-of)
    (port   :init-keyword :port   :init-value *default-pop3-port*
@@ -102,18 +91,6 @@
    (socket :init-keyword :socket :init-value #f :accessor socket-of)
    (timeout :init-keyword :timeout :init-value *default-connection-timeout*)
    (stamp  :init-value #f)))
-
-(define-method pop3-connect ((conn <pop3-connection>))
-  (with-timeout (ref conn 'timeout)
-    (lambda ()
-      (set! (socket-of conn) (make-client-socket
-                               'inet (host-of conn) (port-of conn)))
-        (rlet1 res (check-response (get-response conn))
-          (and-let* ((m (#/<.*>/ res)))
-            (set! (ref conn 'stamp) (m)))))
-    (lambda ()
-      (error <pop3-timeout-error>
-             "cannot connect server; connection timeout"))))
 
 (define-method send-command ((conn <pop3-connection>) fmt . args)
   (let1 out (socket-output-port (socket-of conn))
@@ -132,6 +109,18 @@
                        (error condition res)))])])
     (values (checker <pop3-bad-response-error>)
             (checker <pop3-authentication-error>))))
+
+(define-method pop3-connect ((conn <pop3-connection>))
+  (with-timeout (ref conn 'timeout)
+    (lambda ()
+      (set! (socket-of conn) (make-client-socket
+                               'inet (host-of conn) (port-of conn)))
+        (rlet1 res (check-response (get-response conn))
+          (and-let* ((m (#/<.*>/ res)))
+            (set! (ref conn 'stamp) (m)))))
+    (lambda ()
+      (error <pop3-timeout-error>
+             "cannot connect server; connection timeout"))))
 
 (define-method pop3-quit ((conn <pop3-connection>))
   (unwind-protect
@@ -157,48 +146,15 @@
       (values (string->number (m 1)) (string->number (m 2)))
       (error <pop3-bad-response-error> "wrong response format:" res))))
 
-;; Return response a line includes CRLF
-(define (read-response-line iport)
-  (let loop ([c (read-char iport)]
-             [r '()])
-    (cond [(eof-object? c) c]
-          [(and (eqv? c #\return)
-                (eqv? (peek-char iport) #\newline))
-           (list->string (reverse! (list* (read-char iport) c r)))]
-          [else
-            (loop (read-char iport)
-                  (cons c r))])))
-
-(define (read-response-lines iport oport flusher)
-  (let loop ([line (read-response-line iport)]
-             [size 0])
-    (cond [(eof-object? line)
-           (error <pop3-bad-response-error> "unexpected EOF")]
-          [(#/^\.\r\n/ line)
-           (flusher oport size)]
-          [else
-            (display (regexp-replace #/^\./ line "") oport)
-            (loop (read-response-line iport)
-                  (+ size (string-size line)))])))
-
-(define (sink&flusher . args)
-  (let-keywords args ([sink (open-output-string)]
-                      [flusher (lambda (sink size) (get-output-string sink))])
-    (values sink flusher)))
-
 (define-method pop3-retr ((conn <pop3-connection>) msgnum)
   (rlet1 res (check-response (send-command conn "RETR ~d" msgnum))
-    (read-response-lines
-      (socket-input-port (socket-of conn))
-      (current-output-port)
-      (lambda _ ))))
+    (with-input-from-port (socket-input-port (socket-of conn))
+      read-response-lines)))
 
 (define-method pop3-top ((conn <pop3-connection>) msgnum nlines)
   (rlet1 res (check-response (send-command conn "TOP ~d ~d" msgnum nlines))
-    (read-response-lines
-      (socket-input-port (socket-of conn))
-      (current-output-port)
-      (lambda _ ))))
+    (with-input-from-port (socket-input-port (socket-of conn))
+      read-response-lines)))
 
 (define-method pop3-dele ((conn <pop3-connection>) msgnum)
   (check-response (send-command conn "DELE ~d" msgnum)))
@@ -217,14 +173,15 @@
         (error <pop3-bad-response-error> "bad response:" res))))
   (define (multi)
     (check-response (send-command conn "LIST"))
-    (receive (sink flusher) (sink&flusher)
-      (let* ([iport (socket-input-port (socket-of conn))]
-             [lines (read-response-lines iport sink flusher)])
-        (filter-map (lambda (line)
-                      (and-let* ([(not (string-null? line))]
-                                 [m (#/^(\d+)\s+(\d+)$/ line)])
-                        (cons (string->number (m 1)) (string->number (m 2)))))
-                    (string-split lines #/\r?\n/)))))
+    (let1 lines (with-output-to-string
+                  (lambda ()
+                    (with-input-from-port (socket-input-port (socket-of conn))
+                      read-response-lines)))
+      (filter-map (lambda (line)
+                    (and-let* ([(not (string-null? line))]
+                               [m (#/^(\d+)\s+(\d+)$/ line)])
+                      (cons (string->number (m 1)) (string->number (m 2)))))
+                  (string-split lines #/\r?\n/))))
   (let1 msgnum (get-optional args #f)
     (if msgnum (single msgnum) (multi))))
 
@@ -236,19 +193,20 @@
         (error <pop3-bad-response-error> "bad response:" res))))
   (define (multi)
     (check-response (send-command conn "UIDL"))
-    (receive (sink flusher) (sink&flusher)
-      (let* ([iport (socket-input-port (socket-of conn))]
-             [lines (read-response-lines iport sink flusher)])
-        (filter-map (lambda (line)
-                      (and-let* ([(not (string-null? line))]
-                                 [m (#/^(\d+)\s+(.+)$/ line)])
-                        (cons (string->number (m 1)) (m 2))))
-                    (string-split lines #/\r?\n/)))))
+    (let1 lines (with-output-to-string
+                  (lambda ()
+                    (with-input-from-port (socket-input-port (socket-of conn))
+                      read-response-lines)))
+      (filter-map (lambda (line)
+                    (and-let* ([(not (string-null? line))]
+                               [m (#/^(\d+)\s+(.+)$/ line)])
+                      (cons (string->number (m 1)) (m 2))))
+                  (string-split lines #/\r?\n/))))
   (let1 msgnum (get-optional args #f)
     (if msgnum (single msgnum) (multi))))
 
 
-;;----------------------------------------------------------
+;;----------------------------------------------------------------------
 ;; High Level API
 ;;
 
@@ -273,6 +231,45 @@
                    (pop3-login conn username password))
                  (proc conn))
           (pop3-quit conn))))))
+
+
+;;----------------------------------------------------------------------
+;; Utility functions
+;;
+(define (read-response-line)
+  (let loop ([c (read-char)]
+             [r '()])
+    (cond [(eof-object? c) c]
+          [(and (eqv? c #\return)
+                (eqv? (peek-char) #\newline))
+           (list->string (reverse! (list* (read-char) c r)))]
+          [else
+            (loop (read-char)
+                  (cons c r))])))
+
+(define (read-response-lines)
+  (let loop ([line (read-response-line)]
+             [size 0])
+    (cond [(eof-object? line)
+           (error <pop3-bad-response-error> "unexpected EOF")]
+          [(#/^\.\r\n/ line) size]
+          [else
+            (display (regexp-replace #/^\./ line ""))
+            (loop (read-response-line)
+                  (+ size (string-size line)))])))
+
+;; from lib/net/client.scm
+(define (with-timeout timeout thunk . opt-handler)
+  (let1 handler (get-optional opt-handler (lambda () #f))
+    (if (and timeout (> timeout 0))
+      (let1 thread (make-thread thunk)
+        (thread-start! thread)
+        (guard (exc [(join-timeout-exception? exc)
+                     (thread-terminate! thread)
+                     (handler)]
+                    [else (raise exc)])
+          (thread-join! thread timeout)))
+      (thunk))))
 
 
 (provide "rfc/pop3")

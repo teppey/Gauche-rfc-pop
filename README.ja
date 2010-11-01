@@ -71,12 +71,12 @@ Function: call-with-pop3-connection host username password proc &keyword apop
 
   (call-with-pop3-connection pop-host pop-user pop-pass
     (lambda (conn)
-      (for-each (pair)
-        (let1 num (car pair)
-          (with-output-to-file #`"./inbox/,num"
-            (lambda ()
-              (pop3-retr conn))))
-        (pop3-list conn))))
+      (for-each (lambda (pair)
+                  (let1 num (car pair)
+                    (with-output-to-file #`"./inbox/,num"
+                      (lambda () (pop3-retr conn num)))
+                    (pop3-dele conn num)))
+                (pop3-list conn))))
 
 Method: pop3-connect (conn <pop3-connection>)
 

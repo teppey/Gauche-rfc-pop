@@ -23,7 +23,7 @@ Class: <pop3-connection>
 
   Instance Variable of <pop3-connection>: port
 
-    POP3サーバーのポート番号。
+    POP3サーバーのポート番号。デフォルトでは110番です。
 
   Instance Variable of <pop3-connection>: timeout
 
@@ -31,6 +31,16 @@ Class: <pop3-connection>
 
 
 Function: call-with-pop3-connection host username password proc &keyword port apop
+
+  POP3サーバーに接続して認証を行い、<pop3-connection>オブジェクトとともに
+  procを呼びます。hostには接続するサーバーを指定します。``hostname:port''と
+  いう形式でポート番号を指定することもできます。
+
+  username、passwordは認証に使用するユーザー名とパスワードです。キーワード引
+  数apopに真の値が指定されると、APOP方式で認証を行います。
+
+  hostへの接続が確率したら、procが<pop3-connection>オブジェクトを引数にして呼ばれます。procから返ったとき
+  この接続はクローズされ、procの戻り値がcall-with-pop3-connectionから返されます。
 
 Method: pop3-connect (conn <pop3-connection>)
 

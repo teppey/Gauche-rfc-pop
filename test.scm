@@ -17,7 +17,6 @@
 (use rfc.pop3)
 (test-module 'rfc.pop3)
 
-(define *pop-port* 7011)
 (define *users* '(("user" . "pass")))
 (define *stamp* #`"<,(sys-getpid).,(sys-time)@localhost>")
 (define *retr-response* '("From: postmaster"
@@ -37,7 +36,6 @@
     (use util.digest)
     (use util.list)
 
-    (define *pop-port* ,*pop-port*)
     (define *users* ',*users*)
     (define *stamp* ,*stamp*)
     (define *user* #f)
@@ -123,24 +121,27 @@
                   (sys-exit 1)]))))
 
     (define (main args)
-      (let1 socket (make-server-socket 'inet *pop-port* :reuse-addr? #t)
-        (print "ready") (flush) ;handshake
+      (let1 socket (make-server-socket 'inet 0 :reuse-addr? #t)
+        ; handshake
+        (print (sockaddr-port (socket-address socket))) (flush)
         (pop-server socket)
         0))
     ))
 
 (with-output-to-file "./testsrv.scm" (lambda () (for-each write *simple-popd*)))
 
+(define *testsrv-port* #f)
 (define (start-test-server)
   (let1 pc (run-process '("gosh" "./testsrv.scm") :output :pipe)
-    (read-line (process-output pc)) ;handshake
+    ; handshake
+    (set! *testsrv-port* (string->number (read-line (process-output pc))))
     ))
 
 (define (test-ok comment response)
   (test* comment "+OK" response string-prefix?))
 
 (start-test-server)
-(define conn (make <pop3-connection> :host "localhost" :port *pop-port*))
+(define conn (make <pop3-connection> :host "localhost" :port *testsrv-port*))
 (pop3-connect conn)
 
 
@@ -200,14 +201,14 @@
 (test-ok "call-with-pop3-connection"
          (call-with-pop3-connection "localhost" "user" "pass"
            (lambda (conn) (pop3-noop conn))
-           :port *pop-port*))
+           :port *testsrv-port*))
 (sys-waitpid -1)
 
 (start-test-server)
 (test-ok "call-with-pop3-connection host:port"
-         (call-with-pop3-connection #`"localhost:,*pop-port*" "user" "pass"
+         (call-with-pop3-connection #`"localhost:,*testsrv-port*" "user" "pass"
            (lambda (conn) (pop3-noop conn))
-           :port (+ *pop-port* 1)))
+           :port (+ *testsrv-port* 1)))
 (sys-waitpid -1)
 
 

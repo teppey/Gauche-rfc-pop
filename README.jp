@@ -1,7 +1,7 @@
 Module rfc.pop3
 ===============
 
-このモジュールはRFC1939で定義されているPOP3(Post Office Protocol - Version3)プロトコルのクライアントAPIを提供します。
+このモジュールはRFC1939で定義されているPOP3プロトコル(Post Office Protocol - Version3)のクライアントAPIを提供します。
 
 [RFC1939] http://www.ietf.org/rfc/rfc1939.txt
 

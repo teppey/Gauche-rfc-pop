@@ -53,6 +53,8 @@
           ; Low level API
           pop3-connect
           pop3-quit
+          pop3-user
+          pop3-pass
           pop3-login
           pop3-login-apop
           pop3-stat
@@ -135,9 +137,15 @@
     (begin (socket-close (socket-of conn))
            (set! (socket-of conn) #f))))
 
-(define-method pop3-login ((conn <pop3-connection>) username password)
-  (check-response-auth (send-command conn "USER ~a" username))
+(define-method pop3-user ((conn <pop3-connection>) username)
+  (check-response-auth (send-command conn "USER ~a" username)))
+
+(define-method pop3-pass ((conn <pop3-connection>) password)
   (check-response-auth (send-command conn "PASS ~a" password)))
+
+(define-method pop3-login ((conn <pop3-connection>) username password)
+  (pop3-user conn username)
+  (pop3-pass conn password))
 
 (define-method pop3-login-apop ((conn <pop3-connection>) username password)
   (unless (ref conn 'stamp)

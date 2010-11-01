@@ -46,11 +46,6 @@
           <pop3-authentication-error>
           <pop3-bad-response-error>
           <pop3-connection>
-
-          ; High level API
-          call-with-pop3-connection
-
-          ; Low level API
           pop3-connect
           pop3-quit
           pop3-user
@@ -65,6 +60,7 @@
           pop3-rset
           pop3-list
           pop3-uidl
+          call-with-pop3-connection
           )
   ;(export-all)
   )
@@ -221,14 +217,13 @@
 
 
 ;;----------------------------------------------------------------------
-;; High Level API
+;; Convenient procedure
 ;;
-
-;; Port number
-;;  if `host' argument is "host:port", use host and port
-;;  if not above form, use :port keyword argument
-;;  if :port keyword argument not given, use *default-pop3-port*
 (define (call-with-pop3-connection host username password proc . options)
+  ;; Port number
+  ;;  If `host' argument is "host:port", use host and port
+  ;;  If not above form, use :port keyword argument
+  ;;  If :port keyword argument not given, use *default-pop3-port*
   (define (ensure-host&port host port)
     (receive (host* port*) (string-scan host #\: 'both)
       (if (and host* port*)

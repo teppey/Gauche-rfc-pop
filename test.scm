@@ -152,14 +152,9 @@
   (test* comment "+OK" response string-prefix?))
 
 (test-ok "call-with-pop3-connection"
-         (call-with-pop3-connection "localhost" "user" "pass"
-           (lambda (conn) (pop3-noop conn))
-           :port *testsrv-port*))
-
-(test-ok "call-with-pop3-connection host:port"
-         (call-with-pop3-connection #`"localhost:,*testsrv-port*" "user" "pass"
-           (lambda (conn) (pop3-noop conn))
-           :port (+ *testsrv-port* 1)))
+         (call-with-pop3-connection
+           #`"localhost:,*testsrv-port*" "user" "pass"
+           (lambda (conn) (pop3-noop conn))))
 
 (define conn (make <pop3-connection>
                :host "localhost"

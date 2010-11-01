@@ -220,18 +220,13 @@
 ;; Convenient procedure
 ;;
 (define (call-with-pop3-connection host username password proc . options)
-  ;; Port number
-  ;;  If `host' argument is "host:port", use host and port
-  ;;  If not above form, use :port keyword argument
-  ;;  If :port keyword argument not given, use *default-pop3-port*
-  (define (ensure-host&port host port)
-    (receive (host* port*) (string-scan host #\: 'both)
-      (if (and host* port*)
-        (values host* (string->number port*))
-        (values host port))))
-  (let-keywords options ([port *default-pop3-port*]
-                         [apop #f])
-    (receive (host port) (ensure-host&port host port)
+  (define (ensure-host&port host)
+    (receive (h p) (string-scan host #\: 'both)
+      (if (and h p)
+        (values h (string->number p))
+        (values host *default-pop3-port*))))
+  (let-keywords options ([apop #f])
+    (receive (host port) (ensure-host&port host)
       (let1 conn (make <pop3-connection> :host host :port port)
         (pop3-connect conn)
         (unwind-protect

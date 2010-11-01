@@ -114,7 +114,9 @@
       (error <pop3-timeout-error> "connection timeout"))))
 
 (define-method get-response ((conn <pop3-connection>))
-  (read-line (socket-input-port (socket-of conn))))
+  (if (eq? (socket-status (socket-of conn)) 'connected)
+    (read-line (socket-input-port (socket-of conn)))
+    (error <pop3-error> "not connected")))
 
 (define-values (check-response check-response-auth)
   (let-syntax

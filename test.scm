@@ -46,6 +46,7 @@
       (compose digest-hexify (pa$ digest-string <md5>)))
 
     (define (pop-server socket)
+      (let accept ()
       (let* ((client (socket-accept socket))
              (in (socket-input-port client))
              (out (socket-output-port client)))
@@ -114,11 +115,15 @@
                 [(#/^QUIT/ line)
                  (display "+OK bye\r\n" out)
                  (socket-close client)
+                 (accept)]
+                [(#/^_EXIT/ line)
+                 (display "+OK exit\r\n" out)
+                 (socket-close client)
                  (sys-exit 0)]
                 [else
                   (display "-ERR command not recognized\r\n" out)
                   (socket-close client)
-                  (sys-exit 1)]))))
+                  (accept)])))))
 
     (define (main args)
       (let1 socket (make-server-socket 'inet 0 :reuse-addr? #t)
@@ -129,21 +134,29 @@
     ))
 
 (with-output-to-file "./testsrv.scm" (lambda () (for-each write *simple-popd*)))
-
 (define *testsrv-port* #f)
 (define (start-test-server)
   (let1 pc (run-process '("gosh" "./testsrv.scm") :output :pipe)
     ; handshake
     (set! *testsrv-port* (string->number (read-line (process-output pc))))
     ))
+(start-test-server)
 
 (define (test-ok comment response)
   (test* comment "+OK" response string-prefix?))
 
-(start-test-server)
+(test-ok "call-with-pop3-connection"
+         (call-with-pop3-connection "localhost" "user" "pass"
+           (lambda (conn) (pop3-noop conn))
+           :port *testsrv-port*))
+
+(test-ok "call-with-pop3-connection host:port"
+         (call-with-pop3-connection #`"localhost:,*testsrv-port*" "user" "pass"
+           (lambda (conn) (pop3-noop conn))
+           :port (+ *testsrv-port* 1)))
+
 (define conn (make <pop3-connection> :host "localhost" :port *testsrv-port*))
 (pop3-connect conn)
-
 
 (test* "timestamp" *stamp* (ref conn 'stamp))
 
@@ -194,26 +207,14 @@
        (pop3-uidl conn))
 
 (test-ok "quit" (pop3-quit conn))
-(sys-waitpid -1)
-
-
-(start-test-server)
-(test-ok "call-with-pop3-connection"
-         (call-with-pop3-connection "localhost" "user" "pass"
-           (lambda (conn) (pop3-noop conn))
-           :port *testsrv-port*))
-(sys-waitpid -1)
-
-(start-test-server)
-(test-ok "call-with-pop3-connection host:port"
-         (call-with-pop3-connection #`"localhost:,*testsrv-port*" "user" "pass"
-           (lambda (conn) (pop3-noop conn))
-           :port (+ *testsrv-port* 1)))
-(sys-waitpid -1)
-
 
 
 ;; epilogue
+(pop3-connect conn)
+(display "_EXIT\r\n" (socket-output-port (ref conn 'socket)))
+(read-line (socket-input-port (ref conn 'socket)))
+(sys-waitpid -1)
+
 (test-end)
 
 

@@ -45,12 +45,9 @@
     (define %mkdigest
       (compose digest-hexify (pa$ digest-string <md5>)))
 
-    (define (pop-server socket)
-      (let accept ()
-      (let* ((client (socket-accept socket))
-             (in (socket-input-port client))
-             (out (socket-output-port client)))
-        (display #`"+OK ready ,|*stamp*|\r\n" out)
+    (define (handle-command client)
+      (let ((in (socket-input-port client))
+            (out (socket-output-port client)))
         (let loop ((line (read-line in)))
           (cond [(#/^USER (.+)/ line)
                  => (lambda (m)
@@ -115,15 +112,24 @@
                 [(#/^QUIT/ line)
                  (display "+OK bye\r\n" out)
                  (socket-close client)
-                 (accept)]
+                 #t]
                 [(#/^_EXIT/ line)
                  (display "+OK exit\r\n" out)
                  (socket-close client)
-                 (sys-exit 0)]
+                 #f]
                 [else
                   (display "-ERR command not recognized\r\n" out)
                   (socket-close client)
-                  (accept)])))))
+                  #t]
+                ))))
+
+    (define (pop-server socket)
+      (let accept ()
+        (let1 client (socket-accept socket)
+          (display #`"+OK ready ,|*stamp*|\r\n" (socket-output-port client))
+          (if (handle-command client)
+            (accept)
+            (sys-exit 0)))))
 
     (define (main args)
       (let1 socket (make-server-socket 'inet 0 :reuse-addr? #t)

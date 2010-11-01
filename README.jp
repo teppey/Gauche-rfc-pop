@@ -30,7 +30,7 @@ Class: <pop3-connection>
     接続時に待つ最大秒数。この秒数が経過しても接続できなければ<pop3-timeout-error>コンディションが発生します。
 
 
-Function: call-with-pop3-connection host username password proc &keyword port apop
+Function: call-with-pop3-connection host username password proc &keyword apop
 
   POP3サーバーに接続して認証を行い、<pop3-connection>オブジェクトとともに
   procを呼びます。hostには接続するサーバーを指定します。``hostname:port''と

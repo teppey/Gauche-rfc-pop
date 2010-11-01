@@ -5,13 +5,34 @@ Module rfc.pop3
 
 [RFC1939] http://www.ietf.org/rfc/rfc1939.txt
 
+
+POP3のコンディション
+--------------------
+
+APIが投げる可能性のあるコンディションがいくつか定義されています。
+
 Condition Type: <pop3-error>
+
+  pop3-関連のコンディションのベースクラス。<error>を継承しています。
 
 Condition Type: <pop3-timeout-error>
 
+  このコンディションはサーバーからの応答が一定時間なかった場合に発生します。
+  <pop3-error>を継承しています。
+
 Condition Type: <pop3-authentication-error>
 
+  サーバーでの認証が失敗したときにこのコンディションが投げられます。<pop3-error>を継承しています。
+
 Condition Type: <pop3-bad-response-error>
+
+  サーバーからエラーレスポンスを受け取った場合に発生するコンディションです。
+  レスポンスはmessageスロットに格納されています。<pop3-error>を継承していま
+  す。
+
+
+POP3サーバーへの接続
+--------------------
 
 Class: <pop3-connection>
 
@@ -34,52 +55,102 @@ Function: call-with-pop3-connection host username password proc &keyword apop
 
   POP3サーバーに接続して認証を行い、<pop3-connection>オブジェクトとともに
   procを呼びます。hostには接続するサーバーを指定します。``hostname:port''と
-  いう形式でポート番号を指定することもできます。
+  いう形式でポート番号を指定することができます。
 
   username、passwordは認証に使用するユーザー名とパスワードです。キーワード引
-  数apopに真の値が指定されると、APOP方式で認証を行います。
+  数apopに真の値が渡されるとAPOP方式で認証を行います。
 
   hostへの接続が確率したら、procが<pop3-connection>オブジェクトを引数にして呼ばれます。procから返ったとき
-  この接続はクローズされ、procの戻り値がcall-with-pop3-connectionから返されます。
+  このコネクションはクローズされ、procの戻り値がcall-with-pop3-connectionから返されます。
+
+  この手続きを使用してメールをローカルファイルに保存する例を示します。
+
+  (define pop-host "pop.example.com")
+  (define pop-user "username")
+  (define pop-pass "password")
+
+  (call-with-pop3-connection pop-host pop-user pop-pass
+    (lambda (conn)
+      (for-each (pair)
+        (let1 num (car pair)
+          (with-output-to-file #`"./inbox/,num"
+            (lambda ()
+              (pop3-retr conn))))
+        (pop3-list conn))))
 
 Method: pop3-connect (conn <pop3-connection>)
 
-  POP3サーバに接続します。
+  リモートサーバーに接続し、レスポンス文字列を返します。
 
 Method: pop3-quit (conn <pop3-connection>)
 
-  POP3サーバから切断します。
+  QUITコマンドをリモートサーバーに送り、コネクションを切断します。
+
+
+POP3コマンド
+------------
+
+以下のメソッドはPOP3プロトコルのコマンドを実装します。多くの場合サーバーから
+のレスポンスを文字列で返します。
+
+Method: pop3-user (conn <pop3-connection>) username
+
+  USERコマンドをusernameとともにサーバーに送り、レスポンス文字列を返します。
+
+Method: pop3-pass (conn <pop3-connection>) password
+
+  PASSコマンドをpasswordとともにサーバーに送り、レスポンス文字列を返します。
 
 Method: pop3-login (conn <pop3-connection>) username password
 
-  USERコマンドおよびPASSコマンドを使用してPOP3サーバにログインします。
+  pop3-userとpop3-passを使用してサーバーにログインします。
   ログインに失敗すると<pop3-authentication-error>コンディションが発生します。
 
-Method: pop3-login-apop (conn <pop3-connection>) username password
+Method: pop3-apop (conn <pop3-connection>) username password
 
-  APOPコマンドを使用してPOP3サーバにログインします。
+  APOPコマンドを使用してサーバーにログインします。
   ログインに失敗すると<pop3-authentication-error>コンディションが発生します。
 
 Method: pop3-stat (conn <pop3-connection>)
 
-  このメソッドはPOP3サーバ上のメール数とサイズの2つの値を返します。
+  サーバ上のメール数とそれらの合計サイズの2つの値を返します。
 
-Method: pop3-retr (conn <pop3-connection>) msgnum &keyword sink flusher
+Method: pop3-retr (conn <pop3-connection>) msgnum
 
-  msgnum番のメールを取得して文字列で返します。
+  msgnum番のメールを取得して現在の出力ポートに書き出します。
 
-Method: pop3-top (conn <pop3-connection>) msgnum nlines &keyword sink flusher
+Method: pop3-top (conn <pop3-connection>) msgnum nlines
 
-  msgnum番のメールの内容をnlines行取得して文字列で返します。
+  msgnum番のメールのヘッダ、およびnlines分の本文を現在の出力ポートに書き出しま
+  す。
 
 Method: pop3-dele (conn <pop3-connection>) msgnum
 
+  msgnum番のメールを削除するためのフラグを立てます。pop3-quitによってコネク
+  ションが切断されるまで実際の削除は行われません。
+
 Method: pop3-noop (conn <pop3-connection>)
+
+  NOOPコマンドをリモートサーバーに送り、レスポンス文字列を返します。
+  とりたてて何もしませんが、接続を維持するために使われます。
 
 Method: pop3-rset (conn <pop3-connection>)
 
+  削除マークをすべて取り消します。レスポンス文字列を返します。
+
 Method: pop3-list (conn <pop3-connection>) &optional msgnum
 
-  msgnum引数が指定されたときは、msgnum番のメール番号およびメールサイズの2つの値を返します。そうでなければメール番号とメールサイズの連想リストが返ります。
+  省略可能な引数msgnumが指定された場合は、msgnum番のメール番号およびサイズの
+  2つの値を返します。引数が省略された場合は、サーバー上のメールのメール番号
+  とサイズの連想リストを返します。削除マークのつけられたメールはこのリストに
+  含まれません。
 
 Method: pop3-uidl (conn <pop3-connection>) &optional msgnum
+
+  省略可能な引数msgnumが指定された場合、msgnumおよびmsgnum番のメールをサーバー
+  上で一意に識別するユニークIDの2つの値を返します。引数が省略された場合はメー
+  ル番号とユニークIDの連想リストが返されます。
+
+
+SSLを使用した接続
+-----------------

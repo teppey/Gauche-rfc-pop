@@ -56,7 +56,7 @@
           pop3-user
           pop3-pass
           pop3-login
-          pop3-login-apop
+          pop3-apop
           pop3-stat
           pop3-retr
           pop3-top
@@ -147,7 +147,7 @@
   (pop3-user conn username)
   (pop3-pass conn password))
 
-(define-method pop3-login-apop ((conn <pop3-connection>) username password)
+(define-method pop3-apop ((conn <pop3-connection>) username password)
   (unless (ref conn 'stamp)
     (error <pop3-authentication-error> "not APOP server; cannot login"))
   (let1 digest (digest-hexify
@@ -241,7 +241,7 @@
         (pop3-connect conn)
         (unwind-protect
           (begin (if apop
-                   (pop3-login-apop conn username password)
+                   (pop3-apop conn username password)
                    (pop3-login conn username password))
                  (proc conn))
           (pop3-quit conn))))))

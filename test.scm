@@ -161,7 +161,10 @@
            (lambda (conn) (pop3-noop conn))
            :port (+ *testsrv-port* 1)))
 
-(define conn (make <pop3-connection> :host "localhost" :port *testsrv-port*))
+(define conn (make <pop3-connection>
+               :host "localhost"
+               :port *testsrv-port*
+               :timeout 10))
 (pop3-connect conn)
 
 (test* "timestamp" *stamp* (ref conn 'stamp))

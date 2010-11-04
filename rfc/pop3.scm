@@ -123,26 +123,29 @@
 ;;
 
 (define-method send-command ((conn <pop3-connection>) fmt . args)
+  (let1 out (socket-output-port (socket-of conn))
+    (apply format out #`",|fmt|\r\n" args)))
+
+(define-method send&recv ((conn <pop3-connection>) fmt . args)
   (with-timeout (ref conn 'timeout)
     (lambda ()
-      (let1 out (socket-output-port (socket-of conn))
-        (apply format out #`",|fmt|\r\n" args)
-        (get-response conn)))
+      (apply send-command conn fmt args)
+      (get-response conn))
     (lambda ()
       (error <pop3-timeout-error> "connection timeout"))))
 
 (define-method pop3-quit ((conn <pop3-connection>))
   (unwind-protect
-    (rlet1 res (check-response (send-command conn "QUIT"))
+    (rlet1 res (check-response (send&recv conn "QUIT"))
       (socket-shutdown (socket-of conn) SHUT_WR))
     (begin (socket-close (socket-of conn))
            (set! (socket-of conn) #f))))
 
 (define-method pop3-user ((conn <pop3-connection>) username)
-  (check-response-auth (send-command conn "USER ~a" username)))
+  (check-response-auth (send&recv conn "USER ~a" username)))
 
 (define-method pop3-pass ((conn <pop3-connection>) password)
-  (check-response-auth (send-command conn "PASS ~a" password)))
+  (check-response-auth (send&recv conn "PASS ~a" password)))
 
 (define-method pop3-login ((conn <pop3-connection>) username password)
   (pop3-user conn username)
@@ -153,41 +156,41 @@
     (error <pop3-authentication-error> "not APOP server; cannot login"))
   (let1 digest (digest-hexify
                  (digest-string <md5> #`",(ref conn 'stamp),|password|"))
-    (check-response-auth (send-command conn "APOP ~a ~a" username digest))))
+    (check-response-auth (send&recv conn "APOP ~a ~a" username digest))))
 
 (define-method pop3-stat ((conn <pop3-connection>))
-  (let1 res (check-response (send-command conn "STAT"))
+  (let1 res (check-response (send&recv conn "STAT"))
     (if-let1 m (#/^\+OK\s+(\d+)\s+(\d+)/ res)
       (values (string->number (m 1)) (string->number (m 2)))
       (error <pop3-bad-response-error> "wrong response format:" res))))
 
 (define-method pop3-retr ((conn <pop3-connection>) msgnum)
-  (rlet1 res (check-response (send-command conn "RETR ~d" msgnum))
+  (rlet1 res (check-response (send&recv conn "RETR ~d" msgnum))
     (with-input-from-port (socket-input-port (socket-of conn))
       read-long-response)))
 
 (define-method pop3-top ((conn <pop3-connection>) msgnum nlines)
-  (rlet1 res (check-response (send-command conn "TOP ~d ~d" msgnum nlines))
+  (rlet1 res (check-response (send&recv conn "TOP ~d ~d" msgnum nlines))
     (with-input-from-port (socket-input-port (socket-of conn))
       read-long-response)))
 
 (define-method pop3-dele ((conn <pop3-connection>) msgnum)
-  (check-response (send-command conn "DELE ~d" msgnum)))
+  (check-response (send&recv conn "DELE ~d" msgnum)))
 
 (define-method pop3-noop ((conn <pop3-connection>))
-  (check-response (send-command conn "NOOP")))
+  (check-response (send&recv conn "NOOP")))
 
 (define-method pop3-rset ((conn <pop3-connection>))
-  (check-response (send-command conn "RSET")))
+  (check-response (send&recv conn "RSET")))
 
 (define-method pop3-list ((conn <pop3-connection>) . args)
   (define (single msgnum)
-    (let1 res (check-response (send-command conn "LIST ~d" msgnum))
+    (let1 res (check-response (send&recv conn "LIST ~d" msgnum))
       (if-let1 m (#/^\+OK\s+(\d+)\s+(\d+)$/ res)
         (values (string->number (m 1)) (string->number (m 2)))
         (error <pop3-bad-response-error> "bad response:" res))))
   (define (multi)
-    (check-response (send-command conn "LIST"))
+    (check-response (send&recv conn "LIST"))
     (let1 lines (with-input-from-port (socket-input-port (socket-of conn))
                   long-response-to-string)
       (filter-map (lambda (line)
@@ -200,12 +203,12 @@
 
 (define-method pop3-uidl ((conn <pop3-connection>) . args)
   (define (single msgnum)
-    (let1 res (check-response (send-command conn "UIDL ~d" msgnum))
+    (let1 res (check-response (send&recv conn "UIDL ~d" msgnum))
       (if-let1 m (#/^\+OK\s+(\d)+\s+(.+)$/ res)
         (values (string->number (m 1)) (m 2))
         (error <pop3-bad-response-error> "bad response:" res))))
   (define (multi)
-    (check-response (send-command conn "UIDL"))
+    (check-response (send&recv conn "UIDL"))
     (let1 lines (with-input-from-port (socket-input-port (socket-of conn))
                   long-response-to-string)
       (filter-map (lambda (line)

@@ -35,6 +35,7 @@ pop3-関連のコンディションのベースクラス。@code{<error>}を継�
 サーバーでの認証が失敗したときにこのコンディションが投げられます。
 @code{<pop3-error>}を継承しています。
 @c COMMON
+@end deftp
 
 @deftp {Condition Type} <pop3-bad-response-error>
 @clindex pop3-bad-response-error
@@ -45,7 +46,6 @@ pop3-関連のコンディションのベースクラス。@code{<error>}を継�
 @code{<pop3-error>}を継承しています。
 @c COMMON
 @end deftp
-
 
 @deftp {Class} <pop3-connection>
 @clindex pop3-connection
@@ -75,122 +75,54 @@ POP3サーバーのポート番号。デフォルトでは110番です。
 デフォルトでは30秒に設定されています。
 @c COMMON
 @end defivar
-
-@defivar {<pop-connection>} passive
-@c EN
-True if the client uses passive connection.c
-@c JP
-パッシブコネクションを使うとき真。
-@c COMMON
-@end defivar
-
-@defivar {<ftp-connection>} log-drain
-@c EN
-This slot must hold a @code{<log-drain>} instance (@xref{User-level logging})
-or @code{#f}.  If it has a @code{<log-drain>} instance, ftp communication
-logs are put to it.
-@c JP
-このスロットは@code{<log-drain>}のインスタンス(@ref{User-level logging}参照)
-を保持しているかあるいは@code{#f}でなければなりません。@code{<log-drain>}
-のインスタンスを保持している場合、FTP通信のログがそこに記録されます。
-@c COMMON
-
-@end defivar
 @end deftp
 
-@defun call-with-ftp-connection host proc :key passive port username password account log-drain
+@defun call-with-pop3-connection host username password proc &keyword apop
 @c EN
-A high-level convenience routine to open an ftp connection to
-an ftp server and calls the given procedure.
 @c JP
-高水準の便利関数で、ひとつのFTPサーバーへのFTPコネクションをオープンし、
-与えられた手続きを呼びます。
-@c COMMON
+POP3サーバーに接続して認証を行い、@code{<pop3-connection>}オブジェクトとともに
+@var{proc}を呼びます。@var{host}には接続するサーバーを指定します。@code{@var{hostname}:@var{port}}と
+いう形式でポート番号を指定することができます。
 
-@c EN
-The server is specified by @var{host}.  Optionally, you can add user
-name and/or port number by the form 
-@code{@var{user}@@@var{servername}:@var{port}}.
-If present, user and port portion in @var{host} supersedes the
-keyword arguments.
-@c JP
-接続するサーバーは@var{host}で指定します。オプションでユーザー名、ポー
-ト番号を@code{@var{user}@@@var{servername}:@var{port}}という形式で指定
-できます。もしあれば、@var{host}の部分をキーワード引数にすることもでき
-ます。
-@c COMMON
+@var{username}、@var{password}は認証に使用するユーザー名とパスワードです。キー
+ワード引数@var{apop}に真の値が渡されるとAPOP方式で認証を行います。
 
-@c EN
-If ftp connection to @var{host} is established successfully, 
-@var{proc} is called with one argument, which is an instance
-of @code{<ftp-connection>}.  When @var{proc} returns, 
-the connection is closed and the return value(s) of @var{proc}
-is/are returned from @code{call-with-ftp-connection}.
-When an exception is thrown, the ftp connection is closed
-before the exception escapes from @code{call-with-ftp-connection}.
-@c JP
-@var{host}へのFTPコネクション確立が成功したら、@var{proc}が引数を1つとっ
-て呼ばれます。この引数は@code{<ftp-connection>}のインスタンスです。
-@var{proc}から返ったときにこのコネクションはクローズされ、@var{proc}の
-返り値が@code{call-with-ftp-connection}から返されます。例外がなげられ
-たら、その例外が@code{call-with-ftp-connection}から外へでる前にFTPコネ
-クションはクローズされます。
-@c COMMON
+@var{host}への接続が確率したら、@var{proc}が@code{<pop3-connection>}オブジェ
+クトを引数にして呼ばれます。@var{proc}から返ったときこのコネクションはクロー
+ズされ、@var{proc}の戻り値が@code{call-with-pop3-connection}から返されます。
 
-@c EN
-When a true value is given to the keyword argument @var{passive},
-created ftp connection will use passive mode to send/receive
-data.  The default is the active mode.
-@c JP
-キーワード引数@var{passive}に真値を与えると、FTPコネクションはパッシブ
-モードになります。デフォルトではアクティブモードです。
-@c COMMON
+この手続きを使用してメールをローカルファイルに保存する例を示します。
 
-@c EN
-The keyword argument @var{port}, @var{username}, and @var{password}
-specify the port number, username, and password, respectively.
-When omitted, the port number defaults to 21, @var{username} to
-@code{"anonymous"}, and @var{password} to @code{"anonymous@@"}.
-Note that the port number and/or username are ignored when
-those information is given in the @var{host} argument.
-@c JP
-キーワード引数@var{port}、@var{username}および@var{password}は
-それぞれ、ポート番号、ユーザー名、パスワードを指定するのに使います。
-省略された場合のデフォルトは、ポート番号が21,@var{username}が
-@code{"anonymous"}、@var{password}が@code{"anonymous@@"}にセットされま
-す。ポート番号とユーザー名は@var{host}引数で指定されたものが優先されま
-す。
 @c COMMON
+@example
+(define pop-host "pop.example.com")
+(define pop-user "username")
+(define pop-pass "password")
 
-@c EN
-If the keyword arugment @var{account} is given, its value
-is passed to ftp @code{ACCT} command when requested by
-the server at login time.  The defalut value is a null string @code{""}.
-@c JP
-キーワード引数@var{account}が与えられた場合には、その値が、ログイン時
-にサーバーからの要求でFTPの@code{ACCT}コマンドに渡されます。デフォルト
-では空文字列@code{""}です。
-@c COMMON
-
-@c EN
-The keyword argument @var{log-draion} is set to the created
-ftp connection's @code{log-drain} slot.
-@c JP
-キーワード引数@var{log-draion}が生成したFTPコネクションの
-@code{log-drain}スロットに設定されます。
-@c COMMON
+(call-with-pop3-connection pop-host pop-user pop-pass
+  (lambda (conn)
+    (for-each (lambda (pair)
+                (let1 num (car pair)
+                  (with-output-to-file #`"./inbox/,num"
+                    (lambda () (pop3-retr conn num)))
+                  (pop3-dele conn num)))
+              (pop3-list conn))))
+@end example
 @end defun
 
-@defun ftp-transfer-type conn
+@deffn {Method} pop3-connect (conn <pop3-connection>)
 @c EN
-Returns the transfer type of the ftp connection @code{conn}.
-Can be used with setter, e.g. @code{(set! (ftp-transfer-type conn) 'ascii)}.
 @c JP
-指定したFTPコネクション@code{conn}の転送タイプを返します。セッターを適
-用することもできます。たとえば、@code{(set! (ftp-transfer-type conn) 'ascii)}
-とします。
+リモートサーバーに接続し、レスポンス文字列を返します。
 @c COMMON
-@end defun
+@end deffn
+
+@deffn {Method} pop3-quit (conn <pop3-connection>)
+@c EN
+@c JP
+QUITコマンドをリモートサーバーに送り、コネクションを切断します。
+@c COMMON
+@end deffn
 
 @defun ftp-passive? conn
 @c EN
@@ -200,6 +132,49 @@ Returns true iff ftp connection uses passive data retrieval.
 返します。
 @c COMMON
 @end defun
+
+@c EN
+@c JP
+以下のメソッドはPOP3プロトコルのコマンドを実装します。多くの場合サーバーから
+のレスポンスを文字列で返します。
+@c COMMON
+
+@deffn {Method} pop3-user (conn <pop3-connection>) username
+@c EN
+@c JP
+USERコマンドを@var{username}とともにサーバーに送り、レスポンス文字列を返します。
+@c COMMON
+@end deffn
+
+@deffn {Method} pop3-pass (conn <pop3-connection>) password
+@c EN
+@c JP
+PASSコマンドを@var{password}とともにサーバーに送り、レスポンス文字列を返します。
+@c COMMON
+@end deffn
+
+@deffn {Method} pop3-login (conn <pop3-connection>) username password
+@c EN
+@c JP
+@code{pop3-user}と@code{pop3-pass}を使用してサーバーにログインします。
+ログインに失敗すると@code{<pop3-authentication-error>}コンディションが発生します。
+@c COMMON
+@end deffn
+
+@deffn {Method} pop3-apop (conn <pop3-connection>) username password
+@c EN
+@c JP
+APOPコマンドを使用してサーバーにログインします。
+ログインに失敗すると@code{<pop3-authentication-error>}コンディションが発生します。
+@c COMMON
+@end deffn
+
+@deffn {Method} pop3-stat (conn <pop3-connection>)
+@c EN
+@c JP
+サーバ上のメール数とそれらの合計サイズの2つの値を返します。
+@c COMMON
+@end deffn
 
 @defun ftp-login host :key passive port username password account log-drain
 @c EN

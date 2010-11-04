@@ -67,6 +67,8 @@
   )
 (select-module rfc.pop3)
 
+(autoload rfc.md5 <md5>)
+(autoload util.digest digest-hexify digest-string)
 
 ;;----------------------------------------------------------------------
 ;; Conditions

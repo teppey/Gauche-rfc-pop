@@ -103,15 +103,6 @@
       (error <pop3-timeout-error>
              "cannot connect server; connection timeout"))))
 
-(define-method send-command ((conn <pop3-connection>) fmt . args)
-  (with-timeout (ref conn 'timeout)
-    (lambda ()
-      (let1 out (socket-output-port (socket-of conn))
-        (apply format out #`",|fmt|\r\n" args)
-        (get-response conn)))
-    (lambda ()
-      (error <pop3-timeout-error> "connection timeout"))))
-
 (define-method get-response ((conn <pop3-connection>))
   (if (eq? (socket-status (socket-of conn)) 'connected)
     (read-line (socket-input-port (socket-of conn)))
@@ -130,6 +121,15 @@
 ;;----------------------------------------------------------------------
 ;; POP3 commands
 ;;
+
+(define-method send-command ((conn <pop3-connection>) fmt . args)
+  (with-timeout (ref conn 'timeout)
+    (lambda ()
+      (let1 out (socket-output-port (socket-of conn))
+        (apply format out #`",|fmt|\r\n" args)
+        (get-response conn)))
+    (lambda ()
+      (error <pop3-timeout-error> "connection timeout"))))
 
 (define-method pop3-quit ((conn <pop3-connection>))
   (unwind-protect

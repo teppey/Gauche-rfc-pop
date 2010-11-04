@@ -163,21 +163,19 @@
       (values (string->number (m 1)) (string->number (m 2)))
       (error <pop3-bad-response-error> "wrong response format:" res))))
 
-(define-method pop3-retr ((conn <pop3-connection>) msgnum . options)
-  (let-keywords options ((sink (open-output-string))
-                         (flusher get-output-string))
-    (check-response (send&recv conn "RETR ~d" msgnum))
-    (with-ports (socket-input-port (socket-of conn)) sink #f
-                read-long-response)
-    (flusher sink)))
+(define-syntax define-fetche-method
+  (syntax-rules ()
+    [(_ name command args ...)
+     (define-method name ((conn <pop3-connection>) args ... . options)
+       (let-keywords options ((sink (open-output-string))
+                              (flusher get-output-string))
+         (check-response (send&recv conn command args ...))
+         (with-ports (socket-input-port (socket-of conn)) sink #f
+                     read-long-response)
+         (flusher sink)))]))
 
-(define-method pop3-top ((conn <pop3-connection>) msgnum nlines . options)
-  (let-keywords options ((sink (open-output-string))
-                         (flusher get-output-string))
-    (check-response (send&recv conn "TOP ~d ~d" msgnum nlines))
-    (with-ports (socket-input-port (socket-of conn)) sink #f
-                read-long-response)
-    (flusher sink)))
+(define-fetche-method pop3-retr "RETR ~d" msgnum)
+(define-fetche-method pop3-top "TOP ~d ~d" msgnum nlines)
 
 (define-method pop3-dele ((conn <pop3-connection>) msgnum)
   (check-response (send&recv conn "DELE ~d" msgnum)))

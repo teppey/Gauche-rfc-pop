@@ -255,7 +255,7 @@
           (thread-join! thread timeout)))
       (thunk))))
 
-(define *line-terminator* (string #\x0d #\x0a))
+(define-constant *line-terminator* (string #\x0d #\x0a))
 (define (read-long-response)
   (define get-chunk (pa$ with-output-to-string read-chunk))
   (let loop ((chunk (get-chunk)))
@@ -274,7 +274,7 @@
                 (display *line-terminator*))
               (rpt (cdr lines))]))))
 
-(define *buffer-size* (* 1024 2))
+(define-constant *buffer-size* (* 1024 2))
 (define *buffer* (make-u8vector *buffer-size*))
 (define (read-chunk)
   (let1 n (read-block! *buffer*)

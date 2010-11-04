@@ -132,6 +132,7 @@
     (lambda ()
       (error <pop3-timeout-error> "connection timeout"))))
 
+;; QUIT <CRLF>
 (define-method pop3-quit ((conn <pop3-connection>))
   (unwind-protect
     (begin (send-command conn "QUIT")
@@ -149,16 +150,26 @@
      (define-method name ((conn <pop3-connection>) args ...)
        (check-response (send&recv conn command args ...)))]))
 
+;; USER <SP> <username> <CRLF>
 (define-simple-command auth pop3-user "USER ~a" username)
+
+;; PASS <SP> <password> <CRLF>
 (define-simple-command auth pop3-pass "PASS ~a" password)
+
+;; DELE <SP> <number> <CRLF>
 (define-simple-command pop3-dele "DELE ~d" msgnum)
+
+;; NOOP <CRLF>
 (define-simple-command pop3-noop "NOOP")
+
+;; RSET <CRLF>
 (define-simple-command pop3-rset "RSET")
 
 (define-method pop3-login ((conn <pop3-connection>) username password)
   (pop3-user conn username)
   (pop3-pass conn password))
 
+;; APOP <SP> <username> <SP> <digest> <CRLF>
 (define-method pop3-apop ((conn <pop3-connection>) username password)
   (unless (ref conn 'stamp)
     (error <pop3-authentication-error> "not APOP server; cannot login"))
@@ -166,6 +177,7 @@
                  (digest-string <md5> #`",(ref conn 'stamp),|password|"))
     (check-response-auth (send&recv conn "APOP ~a ~a" username digest))))
 
+;; STAT <CRLF>
 (define-method pop3-stat ((conn <pop3-connection>))
   (let1 res (check-response (send&recv conn "STAT"))
     (if-let1 m (#/^\+OK\s+(\d+)\s+(\d+)/ res)
@@ -183,9 +195,13 @@
                      read-long-response)
          (flusher sink)))]))
 
+;; RETR <SP> <number> <CRLF>
 (define-fetche-method pop3-retr "RETR ~d" msgnum)
+
+;; TOP <SP> <number> <SP> <lines> <CRLF>
 (define-fetche-method pop3-top "TOP ~d ~d" msgnum nlines)
 
+;; LIST [<SP> <number>] <CRLF>
 (define-method pop3-list ((conn <pop3-connection>) . args)
   (define (single msgnum)
     (let1 res (check-response (send&recv conn "LIST ~d" msgnum))
@@ -204,6 +220,7 @@
   (let1 msgnum (get-optional args #f)
     (if msgnum (single msgnum) (multi))))
 
+;; UIDL [<SP> <number>] <CRLF>
 (define-method pop3-uidl ((conn <pop3-connection>) . args)
   (define (single msgnum)
     (let1 res (check-response (send&recv conn "UIDL ~d" msgnum))

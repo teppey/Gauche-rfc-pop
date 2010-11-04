@@ -63,7 +63,6 @@
           pop3-uidl
           call-with-pop3-connection
           )
-  ;(export-all)
   )
 (select-module rfc.pop3)
 
@@ -73,15 +72,16 @@
 ;;----------------------------------------------------------------------
 ;; Conditions
 ;;
+
 (define-condition-type <pop3-error> <error> #f)
 (define-condition-type <pop3-timeout-error> <pop3-error> #f)
 (define-condition-type <pop3-authentication-error> <pop3-error> #f)
 (define-condition-type <pop3-bad-response-error> <pop3-error> #f)
 
-
 ;;----------------------------------------------------------------------
 ;; POP3 connection context
 ;;
+
 (define-constant *default-pop3-port* 110)
 (define-constant *default-connection-timeout* 30)
 
@@ -129,10 +129,10 @@
     (values (checker <pop3-bad-response-error>)
             (checker <pop3-authentication-error>))))
 
-
 ;;----------------------------------------------------------------------
 ;; POP3 commands
 ;;
+
 (define-method pop3-quit ((conn <pop3-connection>))
   (unwind-protect
     (rlet1 res (check-response (send-command conn "QUIT"))
@@ -218,10 +218,10 @@
   (let1 msgnum (get-optional args #f)
     (if msgnum (single msgnum) (multi))))
 
-
 ;;----------------------------------------------------------------------
 ;; Convenient procedure
 ;;
+
 (define (call-with-pop3-connection host username password proc . options)
   (define (ensure-host&port host)
     (receive (h p) (string-scan host #\: 'both)
@@ -239,12 +239,11 @@
                  (proc conn))
           (pop3-quit conn))))))
 
-
 ;;----------------------------------------------------------------------
 ;; Utility functions
 ;;
 
-;; from lib/net/client.scm
+;; from trunk/lib/net/client.scm
 (define (with-timeout timeout thunk . opt-handler)
   (let1 handler (get-optional opt-handler (lambda () #f))
     (if (and timeout (> timeout 0))
@@ -289,6 +288,5 @@
 
 (define (long-response-to-string)
   (with-output-to-string read-long-response))
-
 
 (provide "rfc/pop3")

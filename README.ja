@@ -49,7 +49,7 @@ Class: <pop3-connection>
   Instance Variable of <pop3-connection>: timeout
 
     接続時に待つ最大秒数。この秒数が経過しても接続できなければ<pop3-timeout-error>コンディションが発生します。
-
+    デフォルトでは30秒に設定されています。
 
 Function: call-with-pop3-connection host username password proc &keyword apop
 

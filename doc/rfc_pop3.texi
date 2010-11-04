@@ -7,20 +7,42 @@
 @c EN
 This module provides a client API for POP3, defined in RFC1939 ``Post Office Protocol version 3''
 @c JP
-このモジュールはRFC1939で定義されているPOP3(Post Office Protocol - Version 3)プロトコルのクライアントAPIを提供します。
+このモジュールはRFC1939で定義されているPOP3プロトコル(Post Office Protocol - Version 3)のクライアントAPIを提供します。
 @c COMMON
 @end deftp
 
-@deftp {Condition Type} <ftp-error>
-@clindex ftp-error
+@deftp {Condition Type} <pop3-error>
+@clindex pop3-error
 @c EN
-This type of exception is thrown when the ftp server returns an error code.
-Inherits @code{<error>}.  The message field contains the server reply,
-including the status code.
 @c JP
-このタイプの例外はFTPサーバーがエラーコードを返したときに投げられます。
-@code{<error>}を継承しています。メッセージフィールドにはステータスコー
-ドを含むサーバーからの返答が含まれます。
+pop3-関連のコンディションのベースクラス。@code{<error>}を継承しています。
+@c COMMON
+@end deftp
+
+@deftp {Condition Type} <pop3-timeout-error>
+@clindex pop3-timeout-error
+@c EN
+@c JP
+このコンディションはサーバーからの応答が一定時間なかった場合に発生します。
+@code{<pop3-error>}を継承しています。
+@c COMMON
+@end deftp
+
+@deftp {Condition Type} <pop3-authentication-error>
+@clindex pop3-authentication-error
+@c EN
+@c JP
+サーバーでの認証が失敗したときにこのコンディションが投げられます。
+@code{<pop3-error>}を継承しています。
+@c COMMON
+
+@deftp {Condition Type} <pop3-bad-response-error>
+@clindex pop3-bad-response-error
+@c EN
+@c JP
+サーバーからエラーレスポンスを受け取った場合に発生するコンディションです。
+レスポンスはmessageスロットに格納さrています。
+@code{<pop3-error>}を継承しています。
 @c COMMON
 @end deftp
 
@@ -28,24 +50,33 @@ including the status code.
 @deftp {Class} <pop3-connection>
 @clindex pop3-connection
 @c EN
-An object to keep FTP connection to a server.  It has the following
-public slots.
 @c JP
-ひとつのサーバーへのFTPコネクションを保持するオブジェクト。以下の公開
-スロットがあります。
+POP3サーバーへの接続を保持するオブジェクト。以下の公開スロットがあります。
 @c COMMON
 
-@defivar {<ftp-connection>} transfer-type
+@defivar {<pop3-connection>} host
 @c EN
-FTP transfer type.  Must be one of the following symbols:
-@code{ascii}, @code{binary} (default), and @code{image}.
 @c JP
-FTPの転送タイプ。以下のシンボルのどれかひとつでなければなりません。
-@code{ascii}、@code{binary} (デフォルト)、および@code{image}。
+POP3サーバーのホスト名。
 @c COMMON
 @end defivar
 
-@defivar {<ftp-connection>} passive
+@defivar {<pop3-connection>} port
+@c EN
+@c JP
+POP3サーバーのポート番号。デフォルトでは110番です。
+@c COMMON
+@end defivar
+
+@defivar {<pop3-connection>} timeout
+@c EN
+@c JP
+接続時に待つ最大秒数。この秒数が経過しても接続できなければ@code{<pop3-timeout-error>}コンディションが発生します。
+デフォルトでは30秒に設定されています。
+@c COMMON
+@end defivar
+
+@defivar {<pop-connection>} passive
 @c EN
 True if the client uses passive connection.c
 @c JP

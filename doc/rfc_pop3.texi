@@ -104,7 +104,7 @@ POP3サーバーに接続して認証を行い、@code{<pop3-connection>}オブ�
 @var{username}、@var{password}は認証に使用するユーザー名とパスワードです。キー
 ワード引数@var{apop}に真の値が渡されるとAPOP方式で認証を行います。
 
-@var{host}への接続が確率したら、@var{proc}が@code{<pop3-connection>}オブジェ
+@var{host}への接続が確立すると、@var{proc}が@code{<pop3-connection>}オブジェ
 クトを引数にして呼ばれます。@var{proc}から返ったときこのコネクションはクロー
 ズされ、@var{proc}の戻り値が@code{call-with-pop3-connection}から返されます。
 
@@ -226,8 +226,8 @@ APOPコマンドを使用してサーバーにログインします。
 @deffn {Method} pop3-dele (conn <pop3-connection>) msgnum
 @c EN
 @c JP
-@var{msgnum}番のメールを削除するためのフラグを立てます。@code{pop3-quit}によっ
-てコネク ションが切断されるまで実際の削除は行われません。
+@var{msgnum}番のメールを削除するフラグを立てます。@code{pop3-quit}によっ
+てコネクションが切断されるまで実際の削除は行われません。
 @c COMMON
 @end deffn
 

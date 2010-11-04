@@ -131,18 +131,18 @@ Method: pop3-dele (conn <pop3-connection>) msgnum
 
 Method: pop3-noop (conn <pop3-connection>)
 
-  NOOPコマンドをリモートサーバーに送り、レスポンス文字列を返します。
-  とりたてて何もしませんが、接続を維持するために使われます。
+    NOOPコマンドをリモートサーバーに送ります。
+    とりたてて何もしませんが、接続を維持するために使われます。
 
 Method: pop3-rset (conn <pop3-connection>)
 
-  削除マークをすべて取り消します。レスポンス文字列を返します。
+  削除マークをすべて取り消します。
 
 Method: pop3-list (conn <pop3-connection>) &optional msgnum
 
   省略可能な引数msgnumが指定された場合は、msgnum番のメール番号およびサイズの
   2つの値を返します。引数が省略された場合は、サーバー上のメールのメール番号
-  とサイズの連想リストを返します。削除マークのつけられたメールはこのリストに
+  とサイズの連想リストを返します。このリストに削除マークのつけられたメールは
   含まれません。
 
 Method: pop3-uidl (conn <pop3-connection>) &optional msgnum

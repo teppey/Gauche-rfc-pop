@@ -140,11 +140,20 @@
     (begin (socket-close (socket-of conn))
            (set! (socket-of conn) #f))))
 
-(define-method pop3-user ((conn <pop3-connection>) username)
-  (check-response-auth (send&recv conn "USER ~a" username)))
+(define-syntax define-simple-command
+  (syntax-rules (auth)
+    [(_ auth name command args ...)
+     (define-method name ((conn <pop3-connection>) args ...)
+       (check-response-auth (send&recv conn command args ...)))]
+    [(_ name command args ...)
+     (define-method name ((conn <pop3-connection>) args ...)
+       (check-response (send&recv conn command args ...)))]))
 
-(define-method pop3-pass ((conn <pop3-connection>) password)
-  (check-response-auth (send&recv conn "PASS ~a" password)))
+(define-simple-command auth pop3-user "USER ~a" username)
+(define-simple-command auth pop3-pass "PASS ~a" password)
+(define-simple-command pop3-dele "DELE ~d" msgnum)
+(define-simple-command pop3-noop "NOOP")
+(define-simple-command pop3-rset "RSET")
 
 (define-method pop3-login ((conn <pop3-connection>) username password)
   (pop3-user conn username)
@@ -176,15 +185,6 @@
 
 (define-fetche-method pop3-retr "RETR ~d" msgnum)
 (define-fetche-method pop3-top "TOP ~d ~d" msgnum nlines)
-
-(define-method pop3-dele ((conn <pop3-connection>) msgnum)
-  (check-response (send&recv conn "DELE ~d" msgnum)))
-
-(define-method pop3-noop ((conn <pop3-connection>))
-  (check-response (send&recv conn "NOOP")))
-
-(define-method pop3-rset ((conn <pop3-connection>))
-  (check-response (send&recv conn "RSET")))
 
 (define-method pop3-list ((conn <pop3-connection>) . args)
   (define (single msgnum)

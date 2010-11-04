@@ -37,6 +37,7 @@
 (define-module rfc.pop3
   (use gauche.net)
   (use gauche.threads)
+  (use gauche.uvector)
   (use srfi-1)
   (use srfi-13)
   (use rfc.md5)
@@ -126,6 +127,10 @@
     (values (checker <pop3-bad-response-error>)
             (checker <pop3-authentication-error>))))
 
+
+;;----------------------------------------------------------------------
+;; POP3 commands
+;;
 (define-method pop3-quit ((conn <pop3-connection>))
   (unwind-protect
     (rlet1 res (check-response (send-command conn "QUIT"))
@@ -159,7 +164,7 @@
 (define-method pop3-retr ((conn <pop3-connection>) msgnum)
   (rlet1 res (check-response (send-command conn "RETR ~d" msgnum))
     (with-input-from-port (socket-input-port (socket-of conn))
-      read-response-lines)))
+      %read-response-lines)))
 
 (define-method pop3-top ((conn <pop3-connection>) msgnum nlines)
   (rlet1 res (check-response (send-command conn "TOP ~d ~d" msgnum nlines))
@@ -274,6 +279,36 @@
                     [else (raise exc)])
           (thread-join! thread timeout)))
       (thunk))))
+
+(define *line-terminator* (list->string '(#\x0d #\x0a)))
+(define (%read-response-lines)
+  (define get-chunk (pa$ with-output-to-string read-chunk))
+  (let loop ((chunk (get-chunk)))
+    (let rpt ((lines (string-split chunk *line-terminator*)))
+      (cond [(null? lines)
+             (loop (get-chunk))]
+            [(equal? (car lines) ".") (values)]
+            [(string-prefix? ".." (car lines))
+             (display (string-drop (car lines) 1))
+             (unless (null? (cdr lines))
+               (display *line-terminator*))
+             (rpt (cdr lines))]
+            [else
+              (display (car lines))
+              (unless (null? (cdr lines))
+                (display *line-terminator*))
+              (rpt (cdr lines))]))))
+
+(define *buffer-size* (* 1024 2))
+(define *buffer* (make-u8vector *buffer-size*))
+(define (read-chunk)
+  (let1 n (read-block! *buffer*)
+    (cond ((eof-object? n)
+           (error <pop3-bad-response-error> "unexpected EOF"))
+          ((zero? n)
+           (error <pop3-bad-response-error> "cannot read response"))
+          (else
+            (display (u8vector->string *buffer* 0 n))))))
 
 
 (provide "rfc/pop3")

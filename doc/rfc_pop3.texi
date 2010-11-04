@@ -14,6 +14,7 @@ This module provides a client API for POP3, defined in RFC1939 ``Post Office Pro
 @deftp {Condition Type} <pop3-error>
 @clindex pop3-error
 @c EN
+The base class of @code{pop3}-related conditions. Inherits @code{<error>}.
 @c JP
 pop3-関連のコンディションのベースクラス。@code{<error>}を継承しています。
 @c COMMON
@@ -22,6 +23,8 @@ pop3-関連のコンディションのベースクラス。@code{<error>}を継�
 @deftp {Condition Type} <pop3-timeout-error>
 @clindex pop3-timeout-error
 @c EN
+This condition raise when there is no reponse from the server during the
+fixed time. Inherits @code{<pop3-error>}.
 @c JP
 このコンディションはサーバーからの応答が一定時間なかった場合に発生します。
 @code{<pop3-error>}を継承しています。
@@ -31,6 +34,8 @@ pop3-関連のコンディションのベースクラス。@code{<error>}を継�
 @deftp {Condition Type} <pop3-authentication-error>
 @clindex pop3-authentication-error
 @c EN
+When the authentication by the server fails, this condition is thrown.
+Inherits @code{<pop3-error>}.
 @c JP
 サーバーでの認証が失敗したときにこのコンディションが投げられます。
 @code{<pop3-error>}を継承しています。
@@ -40,9 +45,12 @@ pop3-関連のコンディションのベースクラス。@code{<error>}を継�
 @deftp {Condition Type} <pop3-bad-response-error>
 @clindex pop3-bad-response-error
 @c EN
+It is a condition generated when the error response is received from the server.
+The response is stored in the @code{message} slot.
+Inherits @code{<pop3-error>}.
 @c JP
-サーバーからエラーレスポンスを受け取った場合に発生するコンディションです。
-レスポンスはmessageスロットに格納さrています。
+サーバーからエラーレスポンスを受け取った場合に発生するコンディションです。レ
+スポンスは@code{message}スロットに格納されています。
 @code{<pop3-error>}を継承しています。
 @c COMMON
 @end deftp
@@ -50,12 +58,15 @@ pop3-関連のコンディションのベースクラス。@code{<error>}を継�
 @deftp {Class} <pop3-connection>
 @clindex pop3-connection
 @c EN
+An object to keep POP3 connection to server. It has the following public
+slots.
 @c JP
 POP3サーバーへの接続を保持するオブジェクト。以下の公開スロットがあります。
 @c COMMON
 
 @defivar {<pop3-connection>} host
 @c EN
+Hostname of POP3 server.
 @c JP
 POP3サーバーのホスト名。
 @c COMMON
@@ -63,6 +74,7 @@ POP3サーバーのホスト名。
 
 @defivar {<pop3-connection>} port
 @c EN
+Port number of POP3 server. The default value is 110.
 @c JP
 POP3サーバーのポート番号。デフォルトでは110番です。
 @c COMMON
@@ -70,8 +82,13 @@ POP3サーバーのポート番号。デフォルトでは110番です。
 
 @defivar {<pop3-connection>} timeout
 @c EN
+Maximum seconds for connection waiting. If it is not possible to connect it
+even if this number of seconds passes, @code{<pop3-timeout-error>} condition
+is generated.
+The default value is 30 seconds.
 @c JP
-接続時に待つ最大秒数。この秒数が経過しても接続できなければ@code{<pop3-timeout-error>}コンディションが発生します。
+接続時に待つ最大秒数。この秒数が経過しても接続できなければ
+@code{<pop3-timeout-error>}コンディションが発生します。
 デフォルトでは30秒に設定されています。
 @c COMMON
 @end defivar

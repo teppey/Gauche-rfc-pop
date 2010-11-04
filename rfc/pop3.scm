@@ -136,8 +136,9 @@
 
 (define-method pop3-quit ((conn <pop3-connection>))
   (unwind-protect
-    (rlet1 res (check-response (send&recv conn "QUIT"))
-      (socket-shutdown (socket-of conn) SHUT_WR))
+    (begin (send-command conn "QUIT")
+           (socket-shutdown (socket-of conn) SHUT_WR)
+           (check-response (get-response conn)))
     (begin (socket-close (socket-of conn))
            (set! (socket-of conn) #f))))
 

@@ -40,8 +40,6 @@
   (use gauche.uvector)
   (use srfi-1)
   (use srfi-13)
-  (use rfc.md5)
-  (use util.digest)
   (export <pop3-error>
           <pop3-timeout-error>
           <pop3-authentication-error>

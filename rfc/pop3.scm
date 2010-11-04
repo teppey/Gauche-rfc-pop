@@ -164,7 +164,7 @@
 (define-method pop3-retr ((conn <pop3-connection>) msgnum)
   (rlet1 res (check-response (send-command conn "RETR ~d" msgnum))
     (with-input-from-port (socket-input-port (socket-of conn))
-      %read-response-lines)))
+      read-message)))
 
 (define-method pop3-top ((conn <pop3-connection>) msgnum nlines)
   (rlet1 res (check-response (send-command conn "TOP ~d ~d" msgnum nlines))
@@ -280,8 +280,8 @@
           (thread-join! thread timeout)))
       (thunk))))
 
-(define *line-terminator* (list->string '(#\x0d #\x0a)))
-(define (%read-response-lines)
+(define *line-terminator* (string #\x0d #\x0a))
+(define (read-message)
   (define get-chunk (pa$ with-output-to-string read-chunk))
   (let loop ((chunk (get-chunk)))
     (let rpt ((lines (string-split chunk *line-terminator*)))

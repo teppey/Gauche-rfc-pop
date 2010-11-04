@@ -94,8 +94,8 @@
 (define-method pop3-connect ((conn <pop3-connection>))
   (with-timeout (ref conn 'timeout)
     (lambda ()
-      (set! (socket-of conn) (make-client-socket
-                               'inet (host-of conn) (port-of conn)))
+      (set! (socket-of conn)
+        (make-client-socket 'inet (host-of conn) (port-of conn)))
         (rlet1 res (check-response (get-response conn))
           (and-let* ((m (#/<.*>/ res)))
             (set! (ref conn 'stamp) (m)))))

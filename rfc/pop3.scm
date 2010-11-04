@@ -169,7 +169,7 @@
 (define-method pop3-top ((conn <pop3-connection>) msgnum nlines)
   (rlet1 res (check-response (send-command conn "TOP ~d ~d" msgnum nlines))
     (with-input-from-port (socket-input-port (socket-of conn))
-      read-response-lines)))
+      read-message)))
 
 (define-method pop3-dele ((conn <pop3-connection>) msgnum)
   (check-response (send-command conn "DELE ~d" msgnum)))

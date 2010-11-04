@@ -164,12 +164,12 @@
 (define-method pop3-retr ((conn <pop3-connection>) msgnum)
   (rlet1 res (check-response (send-command conn "RETR ~d" msgnum))
     (with-input-from-port (socket-input-port (socket-of conn))
-      read-message)))
+      read-long-response)))
 
 (define-method pop3-top ((conn <pop3-connection>) msgnum nlines)
   (rlet1 res (check-response (send-command conn "TOP ~d ~d" msgnum nlines))
     (with-input-from-port (socket-input-port (socket-of conn))
-      read-message)))
+      read-long-response)))
 
 (define-method pop3-dele ((conn <pop3-connection>) msgnum)
   (check-response (send-command conn "DELE ~d" msgnum)))
@@ -188,15 +188,13 @@
         (error <pop3-bad-response-error> "bad response:" res))))
   (define (multi)
     (check-response (send-command conn "LIST"))
-    (let1 lines (with-output-to-string
-                  (lambda ()
-                    (with-input-from-port (socket-input-port (socket-of conn))
-                      read-response-lines)))
+    (let1 lines (with-input-from-port (socket-input-port (socket-of conn))
+                  long-response-to-string)
       (filter-map (lambda (line)
                     (and-let* ([(not (string-null? line))]
                                [m (#/^(\d+)\s+(\d+)$/ line)])
                       (cons (string->number (m 1)) (string->number (m 2)))))
-                  (string-split lines #/\r?\n/))))
+                  (string-split lines *line-terminator*))))
   (let1 msgnum (get-optional args #f)
     (if msgnum (single msgnum) (multi))))
 
@@ -208,15 +206,13 @@
         (error <pop3-bad-response-error> "bad response:" res))))
   (define (multi)
     (check-response (send-command conn "UIDL"))
-    (let1 lines (with-output-to-string
-                  (lambda ()
-                    (with-input-from-port (socket-input-port (socket-of conn))
-                      read-response-lines)))
+    (let1 lines (with-input-from-port (socket-input-port (socket-of conn))
+                  long-response-to-string)
       (filter-map (lambda (line)
                     (and-let* ([(not (string-null? line))]
                                [m (#/^(\d+)\s+(.+)$/ line)])
                       (cons (string->number (m 1)) (m 2))))
-                  (string-split lines #/\r?\n/))))
+                  (string-split lines *line-terminator*))))
   (let1 msgnum (get-optional args #f)
     (if msgnum (single msgnum) (multi))))
 
@@ -245,27 +241,6 @@
 ;;----------------------------------------------------------------------
 ;; Utility functions
 ;;
-(define (read-response-line)
-  (let loop ([c (read-char)]
-             [r '()])
-    (cond [(eof-object? c) c]
-          [(and (eqv? c #\return)
-                (eqv? (peek-char) #\newline))
-           (list->string (reverse! (list* (read-char) c r)))]
-          [else
-            (loop (read-char)
-                  (cons c r))])))
-
-(define (read-response-lines)
-  (let loop ([line (read-response-line)]
-             [size 0])
-    (cond [(eof-object? line)
-           (error <pop3-bad-response-error> "unexpected EOF")]
-          [(#/^\.\r\n/ line) size]
-          [else
-            (display (regexp-replace #/^\./ line ""))
-            (loop (read-response-line)
-                  (+ size (string-size line)))])))
 
 ;; from lib/net/client.scm
 (define (with-timeout timeout thunk . opt-handler)
@@ -281,7 +256,7 @@
       (thunk))))
 
 (define *line-terminator* (string #\x0d #\x0a))
-(define (read-message)
+(define (read-long-response)
   (define get-chunk (pa$ with-output-to-string read-chunk))
   (let loop ((chunk (get-chunk)))
     (let rpt ((lines (string-split chunk *line-terminator*)))
@@ -309,6 +284,9 @@
            (error <pop3-bad-response-error> "cannot read response"))
           (else
             (display (u8vector->string *buffer* 0 n))))))
+
+(define (long-response-to-string)
+  (with-output-to-string read-long-response))
 
 
 (provide "rfc/pop3")

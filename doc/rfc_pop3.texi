@@ -104,7 +104,8 @@ POP3サーバーに接続して認証を行い、@code{<pop3-connection>}オブ�
     (for-each (lambda (pair)
                 (let1 num (car pair)
                   (with-output-to-file #`"./inbox/,num"
-                    (lambda () (pop3-retr conn num)))
+                    (lambda ()
+                      (display (pop3-retr conn num))))
                   (pop3-dele conn num)))
               (pop3-list conn))))
 @end example
@@ -167,17 +168,41 @@ APOPコマンドを使用してサーバーにログインします。
 @c COMMON
 @end deffn
 
-@deffn {Method} pop3-retr (conn <pop3-connection>) msgnum
+@deffn {Method} pop3-retr (conn <pop3-connection>) msgnum &keyword flusher
 @c EN
 @c JP
-@var{msgnum}番のメールを取得して現在の出力ポートに書き出します。
+@var{msgnum}番のメールの内容を出力ポート@var{sink}に出力します。すべてのデー
+タが@var{sink}に 送られたあと、@var{flusher}で与えられた手続きを@var{sink}を
+引数として呼び、その戻り値 が@code{pop3-retr}から返されます。
+
+@var{sink}および@var{flusher}のデフォルト値はそれぞれ、新しく作成された文字
+列ポートと @code{get-output-string}です。すなわち、@code{pop3-retr}はデフォ
+ルトではメールの内容を 文字列として返します。この挙動はメールのサイズが大き
+い場合、そのサイズに応 じた文字列バッファが作られるため、問題となるかもしれ
+ません。
+
+以下のサンプルはメールの内容を直接ファイルに保存します。
+
 @c COMMON
+
+@example
+(call-with-pop3-connection host user pass
+  (lambda (conn)
+    (for-each (lambda (pair)
+                (let1 num (car pair)
+                  (call-with-output-file #`"./inbox/,num"
+                    (lambda (out)
+                      (pop3-retr conn num :sink out :flusher (lambda _ #t))))
+                  (pop3-dele conn num)))
+              (pop3-list conn))))
+@end example
 @end deffn
 
-@deffn {Method} pop3-top (conn <pop3-connection>) msgnum nlines
+@deffn {Method} pop3-top (conn <pop3-connection>) msgnum nlines &keyword sink flusher
 @c EN
 @c JP
-@var{msgnum}番のメールのヘッダ、および@var{nlines}分の本文を現在の出力ポートに書き出します。
+メールの本文を@var{nlines}のみ取得する他は@code{pop3-retr}と同じです。
+@var{nlines}が本文の 行数よりも大きい場合、メール全体を取得します。
 @c COMMON
 @end deffn
 
@@ -192,15 +217,15 @@ APOPコマンドを使用してサーバーにログインします。
 @deffn {Method} pop3-noop (conn <pop3-connection>)
 @c EN
 @c JP
-NOOPコマンドをリモートサーバーに送ります。とりたてて何もしませんが、接続を維
-持するために使われます。
+NOOPコマンドをリモートサーバーに送ります。
+とりたてて何もしませんが、接続を維持するために使われます。
 @c COMMON
 @end deffn
 
 @deffn {Method} pop3-rset (conn <pop3-connection>)
 @c EN
 @c JP
-削除マークをすべて取り消します。
+削除フラグをすべて取り消します。
 @c COMMON
 @end deffn
 
@@ -209,7 +234,7 @@ NOOPコマンドをリモートサーバーに送ります。とりたてて何�
 @c JP
 省略可能な引数@var{msgnum}が指定された場合は、@var{msgnum}番のメール番号およ
 びサイズの2つの値を返します。引数が省略された場合は、サーバー上のメールの番
-号とサイズの連想リストを返します。このリストに削除マークのつけられたメールは
+号とサイズの連想リストを返します。このリストに削除フラグのつけられたメールは
 含まれません。
 @c COMMON
 @end deffn

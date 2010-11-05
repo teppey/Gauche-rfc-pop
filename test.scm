@@ -174,9 +174,7 @@
 (test* "apop ng" (test-error <pop3-authentication-error>)
        (pop3-apop conn "user" "bad password"))
 
-(test* "list with arg" '(1 . 1)
-       (receive (num size) (pop3-list conn 1)
-         (cons num size)))
+(test* "list with arg" 1 (pop3-list conn 1))
 
 (test* "list without arg" '((1 . 1) (2 . 2) (3 . 3) (4 . 4) (5 . 5))
        (pop3-list conn))
@@ -199,9 +197,8 @@
                "\r\n")
        (pop3-top conn 1 1))
 
-(test* "uidl with arg" (cons 1 (digest-hexify (digest-string <md5> "foo")))
-       (receive (num unique-id) (pop3-uidl conn 1)
-         (cons num unique-id)))
+(test* "uidl with arg" (digest-hexify (digest-string <md5> "foo"))
+       (pop3-uidl conn 1))
 
 (test* "uidl without arg"
        `((1 . ,(digest-hexify (digest-string <md5> "foo")))

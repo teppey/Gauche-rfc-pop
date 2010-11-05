@@ -295,24 +295,30 @@ All the deletion flags are canceled.
 
 @deffn {Method} pop3-list (conn <pop3-connection>) &optional msgnum
 @c EN
-When optional argument @var{msgnum} is specified, the mail number of
-the @var{msgnum} turn and two size values are returned. When the argument is
-omitted, the list of the association of the mail number and the size of
-mail in the server is returned. E-mail that the deletion flag is
-applied to this list is not included. 
+When optional argument @var{msgnum} is specified, the size of the mail of
+the @var{msgnum} turn is returned. When the argument is omitted, the
+association list of the mail number and the size of mail in the server is
+returned. Mail to which the deletion flag is applied is not included in this
+list.
 @c JP
-省略可能な引数@var{msgnum}が指定された場合は、@var{msgnum}番のメール番号およ
-びサイズの2つの値を返します。引数が省略された場合は、サーバー上のメールの番
-号とサイズの連想リストを返します。このリストに削除フラグのつけられたメールは
-含まれません。
+省略可能な引数@var{msgnum}が指定された場合は、@var{msgnum}番のメールのサイズ
+を返します。引数が省略された場合は、サーバー上のメールのメール番号とサイズの
+連想リストを返します。このリストには削除フラグのつけられたメールは含まれませ
+ん。
 @c COMMON
 @end deffn
 
 @deffn {Method} pop3-uidl (conn <pop3-connection>) &optional msgnum
 @c EN
+When optional argument @var{msgnum} is specified, unique ID that uniquely
+identifies the mail of the @var{msgnum} turn on the server is returned.
+When the argument is omitted, the association list of the mail number and
+unique ID is returned. Unique ID is not changed even if it connects it again
+unlike the mail number.
 @c JP
-省略可能な引数@var{msgnum}が指定された場合、@var{msgnum}および@var{msgnum}番
-のメールをサーバー上で一意に識別するユニークIDの2つの値を返します。引数が省
-略された場合はメール番号とユニークIDの連想リストが返されます。
+省略可能な引数@var{msgnum}が指定された場合、@var{msgnum}番のメールをサーバー
+上で一意に識別するユニークIDを返します。引数が省略された場合はメール番号とユ
+ニークIDの連想リストが返されます。ユニークIDはメール番号と違い、接続しなおし
+ても変化しません。
 @c COMMON
 @end deffn

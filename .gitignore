@@ -8,3 +8,5 @@ testsrv.scm
 Gauche-rfc-pop3.gpd
 autom4te.cache
 TODO
+mkreadme
+README.skel

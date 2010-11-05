@@ -49,7 +49,7 @@ Class: <pop3-connection>
   Instance Variable of <pop3-connection>: timeout
 
     接続時に待つ最大秒数。この秒数が経過しても接続できなければ<pop3-timeout-error>コンディションが発生します。
-    デフォルトでは30秒に設定されています。
+    デフォルトでは30秒です。
 
 Function: call-with-pop3-connection host username password proc &keyword apop
 
@@ -85,7 +85,7 @@ Method: pop3-connect (conn <pop3-connection>)
 
 Method: pop3-quit (conn <pop3-connection>)
 
-  QUITコマンドをリモートサーバーに送り、コネクションを切断します。
+  QUITコマンドをリモートサーバーに送り、コネクションをシャットダウンします。
 
 
 POP3コマンド
@@ -109,7 +109,7 @@ Method: pop3-login (conn <pop3-connection>) username password
 
 Method: pop3-apop (conn <pop3-connection>) username password
 
-  APOPコマンドを使用してサーバーにログインします。
+  APOP方式でサーバーにログインします。
   ログインに失敗すると<pop3-authentication-error>コンディションが発生します。
 
 Method: pop3-stat (conn <pop3-connection>)
@@ -118,16 +118,16 @@ Method: pop3-stat (conn <pop3-connection>)
 
 Method: pop3-retr (conn <pop3-connection>) msgnum &keyword sink flusher
 
-  msgnum番のメールの内容を出力ポートsinkに出力します。すべてのデータがsinkに
-  送られたあと、flusherで与えられた手続きをsinkを引数として呼び、その戻り値
-  がpop3-retrから返されます。
+  msgnum番のメールの内容を出力ポートsinkに送ります。すべてのデータがsinkに送
+  られたあと、flusherで与えられた手続きをsinkを引数として呼び、その戻り値が
+  pop3-retrから返されます。
 
   sinkおよびflusherのデフォルト値はそれぞれ、新しく作成された文字列ポートと
-  get-output-stringです。すなわち、pop3-retrはデフォルトではメールの内容を
-  文字列として返します。この挙動はメールのサイズが大きい場合、そのサイズに応
-  じた文字列バッファが作られるため、問題となるかもしれません。
+  get-output-stringです。すなわち、pop3-retrはデフォルトではメールの内容を文
+  字列として返します。この挙動はメールのサイズが大きい場合、そのサイズに応じ
+  た文字列バッファが作られるため、問題となるかもしれません。
 
-  以下のサンプルはメールの内容を直接ファイルに保存します。
+  以下の例はメールの内容を直接ファイルに保存します。
 
   (call-with-pop3-connection host user pass
     (lambda (conn)
@@ -146,8 +146,7 @@ Method: pop3-top (conn <pop3-connection>) msgnum nlines &keyword sink flusher
 
 Method: pop3-dele (conn <pop3-connection>) msgnum
 
-  msgnum番のメールを削除するためのフラグを立てます。pop3-quitによってコネク
-  ションが切断されるまで実際の削除は行われません。
+  msgnum番のメールを削除するためのフラグを立てます。pop3-quitによってコネクションが切断されるまで実際の削除は行われません。
 
 Method: pop3-noop (conn <pop3-connection>)
 

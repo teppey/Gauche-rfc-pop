@@ -122,7 +122,9 @@
 
 (define-method send-command ((conn <pop3-connection>) fmt . args)
   (let1 out (socket-output-port (socket-of conn))
-    (apply format out #`",|fmt|,|*line-terminator*|" args)))
+    (with-signal-handlers ((SIGPIPE => #f))
+      (lambda ()
+        (apply format out #`",|fmt|,|*line-terminator*|" args)))))
 
 (define-method send&recv ((conn <pop3-connection>) fmt . args)
   (with-timeout (ref conn 'timeout)

@@ -38,6 +38,7 @@
   (use gauche.net)
   (use gauche.threads)
   (use gauche.uvector)
+  (use gauche.vport)
   (use srfi-1)
   (use srfi-13)
   (export <pop3-error>
@@ -193,8 +194,8 @@
        (let-keywords options ((sink (open-output-string))
                               (flusher get-output-string))
          (check-response (send&recv conn command args ...))
-         (with-ports (socket-input-port (socket-of conn)) sink #f
-                     read-long-response)
+         (with-output-to-port sink
+           (lambda () (%read-long-response conn)))
          (flusher sink)))]))
 
 ;; RETR <SP> <number> <CRLF>
@@ -212,8 +213,7 @@
         (error <pop3-bad-response-error> "bad response:" res))))
   (define (multi)
     (check-response (send&recv conn "LIST"))
-    (let1 lines (with-input-from-port (socket-input-port (socket-of conn))
-                  long-response-to-string)
+    (let1 lines (%long-response-to-string conn)
       (filter-map (lambda (line)
                     (and-let* ([(not (string-null? line))]
                                [m (#/^(\d+)\s+(\d+)$/ line)])
@@ -231,8 +231,7 @@
         (error <pop3-bad-response-error> "bad response:" res))))
   (define (multi)
     (check-response (send&recv conn "UIDL"))
-    (let1 lines (with-input-from-port (socket-input-port (socket-of conn))
-                  long-response-to-string)
+    (let1 lines (%long-response-to-string conn)
       (filter-map (lambda (line)
                     (and-let* ([(not (string-null? line))]
                                [m (#/^(\d+)\s+(.+)$/ line)])
@@ -280,36 +279,25 @@
       (thunk))))
 
 (define-constant *line-terminator* (string #\x0d #\x0a))
-(define (read-long-response)
-  (define get-chunk (pa$ with-output-to-string read-chunk))
-  (let loop ((chunk (get-chunk)))
-    (let rpt ((lines (string-split chunk *line-terminator*)))
-      (cond [(null? lines)
-             (loop (get-chunk))]
-            [(equal? (car lines) ".") (values)]
-            [(string-prefix? ".." (car lines))
-             (display (string-drop (car lines) 1))
-             (unless (null? (cdr lines))
-               (display *line-terminator*))
-             (rpt (cdr lines))]
-            [else
-              (display (car lines))
-              (unless (null? (cdr lines))
-                (display *line-terminator*))
-              (rpt (cdr lines))]))))
 
-(define-constant *buffer-size* (* 1024 2))
-(define *buffer* (make-u8vector *buffer-size*))
-(define (read-chunk)
-  (let1 n (read-block! *buffer*)
-    (cond ((eof-object? n)
-           (error <pop3-bad-response-error> "unexpected EOF"))
-          ((zero? n)
-           (error <pop3-bad-response-error> "cannot read response"))
-          (else
-            (display (u8vector->string *buffer* 0 n))))))
+(define-method %read-long-response ((conn <pop3-connection>))
+  (let* ((in (make <buffered-input-port>
+               :fill (pa$ socket-recv! (socket-of conn))))
+         (reader (lambda ()
+                   (let1 line (read-line in #t)
+                     (cond
+                       [(eof-object? line)
+                        (error <pop3-bad-response-error> "unexpected EOF")]
+                       [(string-prefix? ".." line)
+                        (string-drop line 1)]
+                       [(equal? line ".") (eof-object)]
+                       [else line])))))
+    (port-for-each (lambda (line)
+                     (display line)
+                     (display *line-terminator*))
+                   reader)))
 
-(define (long-response-to-string)
-  (with-output-to-string read-long-response))
+(define-method %long-response-to-string ((conn <pop3-connection>))
+  (with-output-to-string (lambda () (%read-long-response conn))))
 
 (provide "rfc/pop3")

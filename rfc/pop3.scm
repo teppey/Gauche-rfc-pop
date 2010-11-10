@@ -68,6 +68,8 @@
 (autoload rfc.md5 <md5>)
 (autoload util.digest digest-hexify digest-string)
 
+(define-constant *line-terminator* (string #\x0d #\x0a))
+
 ;;----------------------------------------------------------------------
 ;; Conditions
 ;;
@@ -277,8 +279,6 @@
                     [else (raise exc)])
           (thread-join! thread timeout)))
       (thunk))))
-
-(define-constant *line-terminator* (string #\x0d #\x0a))
 
 (define-method %read-long-response ((conn <pop3-connection>))
   (let* ((in (make <buffered-input-port>

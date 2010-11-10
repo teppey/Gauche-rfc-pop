@@ -37,7 +37,6 @@
 (define-module rfc.pop3
   (use gauche.net)
   (use gauche.threads)
-  (use gauche.uvector)
   (use gauche.vport)
   (use srfi-1)
   (use srfi-13)

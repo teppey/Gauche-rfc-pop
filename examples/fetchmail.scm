@@ -1,7 +1,7 @@
 ; coding: utf-8
 
 (use file.util)
-(use rfc.pop3)
+(use rfc.pop)
 (use gauche.parseopt)
 (use gauche.process)
 

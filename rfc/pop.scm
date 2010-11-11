@@ -1,5 +1,5 @@
 ;;;
-;;; rfc.pop3 - POP3 client library
+;;; rfc.pop - POP3 client library
 ;;;
 ;;;  Copyright (c) 2010  Teppei Hamada  <temada@gmail.com>
 ;;;
@@ -34,7 +34,7 @@
 ;;; RFC 1939    Post Office Protocol - Version 3
 ;;; http://tools.ietf.org/html/rfc1939
 
-(define-module rfc.pop3
+(define-module rfc.pop
   (use gauche.net)
   (use gauche.threads)
   (use gauche.vport)
@@ -62,7 +62,7 @@
           call-with-pop3-connection
           )
   )
-(select-module rfc.pop3)
+(select-module rfc.pop)
 
 (autoload rfc.md5 <md5>)
 (autoload util.digest digest-hexify digest-string)
@@ -300,4 +300,4 @@
 (define-method %long-response-to-string ((conn <pop3-connection>))
   (with-output-to-string (lambda () (%read-long-response conn))))
 
-(provide "rfc/pop3")
+(provide "rfc/pop")

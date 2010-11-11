@@ -4,11 +4,11 @@
 (use file.util)
 (use gauche.process)
 
-(define *base-dir* (expand-path "~/work/Gauche-rfc-pop3"))
+(define *base-dir* (expand-path "~/work/Gauche-rfc-pop"))
 (define *readme-skel* (build-path *base-dir* "README.skel"))
 (define *readme-en* (build-path *base-dir* "README"))
 (define *readme-jp* (build-path *base-dir* "README.ja"))
-(define *texinfo* (build-path *base-dir* "doc/rfc_pop3.texi"))
+(define *texinfo* (build-path *base-dir* "doc/rfc_pop.texi"))
 
 (define (en&jp)
   (let ((en-out (open-output-string))

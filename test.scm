@@ -1,7 +1,7 @@
 ;;; vim:set fileencoding=utf-8:
 
 ;;;
-;;; Test rfc.pop3
+;;; Test rfc.pop
 ;;;
 
 (use gauche.test)
@@ -13,9 +13,9 @@
 (use rfc.md5)
 (use util.digest)
 
-(test-start "rfc.pop3")
-(use rfc.pop3)
-(test-module 'rfc.pop3)
+(test-start "rfc.pop")
+(use rfc.pop)
+(test-module 'rfc.pop)
 
 (define *users* '(("user" . "pass")))
 (define *stamp* #`"<,(sys-getpid).,(sys-time)@localhost>")

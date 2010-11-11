@@ -67,6 +67,7 @@
 (autoload rfc.md5 <md5>)
 (autoload util.digest digest-hexify digest-string)
 
+;; CRLF
 (define-constant *line-terminator* (string #\x0d #\x0a))
 
 ;;----------------------------------------------------------------------

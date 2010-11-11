@@ -1,10 +1,10 @@
 dnl
-dnl Configuring Gauche-rfc-pop3
+dnl Configuring Gauche-rfc-pop
 dnl  process this file with autoconf to generate 'configure'.
 dnl
 
 AC_PREREQ(2.54)
-AC_INIT(Gauche-rfc-pop3, 0.1, temada@gmail.com)
+AC_INIT(Gauche-rfc-pop, 0.1, temada@gmail.com)
 dnl If you want to use the system name (OS, architecture, etc) in the
 dnl configure, uncomment the following line.  In such a case, you need
 dnl to copy config.guess and config.sub from automake distribution.

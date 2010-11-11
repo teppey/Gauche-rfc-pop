@@ -23,10 +23,10 @@ EXEEXT = @EXEEXT@
 LOCAL_PATHS = @LOCAL_PATHS@
 
 # Module-specific stuff
-PACKAGE   = Gauche-rfc-pop3
+PACKAGE   = Gauche-rfc-pop
 
 ARCHFILES = 
-SCMFILES  = $(srcdir)/rfc/pop3.scm
+SCMFILES  = $(srcdir)/rfc/pop.scm
 HEADERS   = 
 
 TARGET    = $(ARCHFILES)

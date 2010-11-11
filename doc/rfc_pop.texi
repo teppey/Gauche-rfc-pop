@@ -1,9 +1,9 @@
 @c ----------------------------------------------------------------------
-@node POP3, Library modules - Utilities
-@section @code{rfc.pop3} - POP3 client module
+@node POP, Library modules - Utilities
+@section @code{rfc.pop} - POP3 client module
 
-@deftp {Module} rfc.pop3
-@mdindex rfc.pop3
+@deftp {Module} rfc.pop
+@mdindex rfc.pop
 @c EN
 This module provides a client API for POP3, defined in RFC1939 ``Post Office Protocol version 3''
 @c JP

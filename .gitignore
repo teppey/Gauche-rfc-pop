@@ -5,7 +5,7 @@ config.log
 config.status
 test.log
 testsrv.scm
-Gauche-rfc-pop3.gpd
+Gauche-rfc-pop.gpd
 autom4te.cache
 TODO
 README

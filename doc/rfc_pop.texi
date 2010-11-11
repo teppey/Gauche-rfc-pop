@@ -5,11 +5,12 @@
 @deftp {Module} rfc.pop
 @mdindex rfc.pop
 @c EN
-This module provides a client API for POP3, defined in RFC1939 ``Post Office Protocol version 3''
+This module provides a client API for POP3, defined in RFC1939.
 @c JP
-このモジュールはRFC1939で定義されているPOP3プロトコル(Post Office Protocol - Version 3)のクライアントAPIを提供します。
+このモジュールは、RFC1939に定められたPOP3プロトコルのクライアントAPIを提供します。
 @c COMMON
 
+Post Office Protocol - Version 3
 [RFC1939] http://www.ietf.org/rfc/rfc1939.txt
 
 @end deftp
@@ -19,7 +20,7 @@ This module provides a client API for POP3, defined in RFC1939 ``Post Office Pro
 @c EN
 The base class of @code{pop3}-related conditions. Inherits @code{<error>}.
 @c JP
-pop3-関連のコンディションのベースクラス。@code{<error>}を継承しています。
+pop3-関連のコンディションのベースクラスです。@code{<error>}を継承しています。
 @c COMMON
 @end deftp
 
@@ -52,8 +53,8 @@ It is a condition generated when the error response is received from the server.
 The response is stored in the @code{message} slot.
 Inherits @code{<pop3-error>}.
 @c JP
-サーバーからエラーレスポンスを受け取った場合に発生するコンディションです。レ
-スポンスは@code{message}スロットに格納されています。
+サーバーからエラーレスポンスを受け取った場合に発生するコンディションです。
+レスポンスは@code{message}スロットに格納されています。
 @code{<pop3-error>}を継承しています。
 @c COMMON
 @end deftp
@@ -79,15 +80,15 @@ POP3サーバーのホスト名。
 @c EN
 Port number of POP3 server. The default value is 110.
 @c JP
-POP3サーバーのポート番号。デフォルトでは110番です。
+POP3サーバーのポート番号。デフォルトでは110です。
 @c COMMON
 @end defivar
 
 @defivar {<pop3-connection>} timeout
 @c EN
-Maximum seconds for connection waiting. If it is not possible to connect it
-even if this number of seconds passes, @code{<pop3-timeout-error>} condition
-is generated.
+Seconds for connection waiting. If it is not possible to connect it even if
+this number of seconds passes, @code{<pop3-timeout-error>} condition is
+generated.
 The default value is 30 seconds.
 @c JP
 接続時に待つ最大秒数。この秒数が経過しても接続できなければ
@@ -118,8 +119,7 @@ shown.
 @c JP
 POP3サーバーに接続して認証を行い、@code{<pop3-connection>}オブジェクトととも
 に @var{proc}を呼びます。@var{host}には接続するサーバーを指定します。
-@code{@var{hostname}:@var{port}}と いう形式でポート番号を指定することができ
-ます。
+@code{@var{hostname}:@var{port}}という形式でポート番号を指定することができます。
 
 @var{username}、@var{password}は認証に使用するユーザー名とパスワードです。キー
 ワード引数@var{apop}に真の値が渡されるとAPOP方式で認証を行います。
@@ -130,12 +130,9 @@ POP3サーバーに接続して認証を行い、@code{<pop3-connection>}オブ�
 
 この手続きを使用してメールをローカルファイルに保存する例を示します。
 @c COMMON
-@example
-(define pop-host "pop.example.com")
-(define pop-user "username")
-(define pop-pass "password")
 
-(call-with-pop3-connection pop-host pop-user pop-pass
+@example
+(call-with-pop3-connection "pop.example.com" "username" "password"
   (lambda (conn)
     (for-each (lambda (pair)
                 (let1 num (car pair)
@@ -145,6 +142,7 @@ POP3サーバーに接続して認証を行い、@code{<pop3-connection>}オブ�
                   (pop3-dele conn num)))
               (pop3-list conn))))
 @end example
+
 @end defun
 
 @deffn {Method} pop3-connect (conn <pop3-connection>)
@@ -204,7 +202,7 @@ If login failure, @code{<pop3-authentication-error} is generated.
 Login to the server by @code{APOP} method.
 If login failure, @code{<pop3-authentication-error} is generated.
 @c JP
-APOP方式で使用してサーバーにログインします。
+APOP方式でサーバーにログインします。
 ログインに失敗すると@code{<pop3-authentication-error>}コンディションが発生します。
 @c COMMON
 @end deffn
@@ -217,7 +215,7 @@ Return two values, its number of mails on the server and those total size.
 @c COMMON
 @end deffn
 
-@deffn {Method} pop3-retr (conn <pop3-connection>) msgnum &keyword flusher
+@deffn {Method} pop3-retr (conn <pop3-connection>) msgnum &keyword sink flusher
 @c EN
 The content of the mail of the @var{msgnum} turn is sent to output port
 @var{sink}. It is The procedure given by @var{flusher} calls @var{sink} as an
@@ -226,23 +224,21 @@ from @code{pop3-retr}
 
 The default value of sink and flusher are newly created string port and
 @code{get-output-string}, respectively.  That is, @code{pop3-retr} return
-the content of the mail as a string by default. Because the string buffer
-corresponding to the size is made as for this behavior when the size of
-mail is large, it is likely to become a problem.
+the content of the mail as a string by default. When the size of mail is
+large, this behavior might become a problem.
 
 The following samples preserve the content of mail directly in the file.
 @c JP
-@var{msgnum}番のメールの内容を出力ポート@var{sink}に送ります。すべてのデー
-タが@var{sink}に 送られたあと、@var{flusher}で与えられた手続きを@var{sink}を
-引数として呼び、その戻り値 が@code{pop3-retr}から返されます。
+メッセージ番号@var{msgnum}のメールの内容を出力ポート@var{sink}に送ります。す
+べてのデータが@var{sink}に 送られたあと、@var{flusher}で与えられた手続きを
+@var{sink}を引数として呼び、その戻り値 が@code{pop3-retr}から返されます。
 
 @var{sink}および@var{flusher}のデフォルト値はそれぞれ、新しく作成された文字
 列ポートと @code{get-output-string}です。すなわち、@code{pop3-retr}はデフォ
 ルトではメールの内容を 文字列として返します。この挙動はメールのサイズが大き
-い場合、そのサイズに応 じた文字列バッファが作られるため、問題となるかもしれ
-ません。
+い場合に問題となるかもしれません。
 
-以下の例はメールの内容を直接ファイルに保存します。
+以下の例ではメールの内容を直接ファイルに保存します。
 @c COMMON
 @example
 (call-with-pop3-connection host user pass
@@ -273,8 +269,8 @@ of the text, the entire mail is acquired.
 The flag to delete the mail of the @var{msgnum} turn is hoisted. A deletion
 actual until the connection is cut by @code{pop3-quit} is not done.
 @c JP
-@var{msgnum}番のメールを削除するフラグを立てます。@code{pop3-quit}によっ
-てコネクションが切断されるまで実際の削除は行われません。
+メッセージ番号@var{msgnum}のメールを削除するフラグを立てます。
+@code{pop3-quit}によってコネクションが切断されるまで実際の削除は行われません。
 @c COMMON
 @end deffn
 
@@ -284,7 +280,7 @@ Sends @code{NOOP} command to the remote server.
 It is used to keep the connection though it collects and nothing is done.
 @c JP
 NOOPコマンドをリモートサーバーに送ります。
-とりたてて何もしませんが、接続を維持するために使われます。
+何もしませんが、接続を維持するために使われます。
 @c COMMON
 @end deffn
 
@@ -300,14 +296,12 @@ All the deletion flags are canceled.
 @c EN
 When optional argument @var{msgnum} is specified, the size of the mail of
 the @var{msgnum} turn is returned. When the argument is omitted, the
-association list of the mail number and the size of mail in the server is
-returned. Mail to which the deletion flag is applied is not included in this
-list.
+association list of the mail number and the size of mail is returned. Mail
+to which the deletion flag is applied is not included in this list.
 @c JP
-省略可能な引数@var{msgnum}が指定された場合は、@var{msgnum}番のメールのサイズ
-を返します。引数が省略された場合は、サーバー上のメールのメール番号とサイズの
-連想リストを返します。このリストには削除フラグのつけられたメールは含まれませ
-ん。
+省略可能な引数@var{msgnum}が指定された場合は、メッセージ番号@var{msgnum}のメー
+ルのサイズを返します。引数が省略された場合はメッセージ番号とサイズの連想リス
+トを返します。このリストには削除フラグのつけられたメールは含まれません。
 @c COMMON
 @end deffn
 
@@ -319,9 +313,9 @@ When the argument is omitted, the association list of the mail number and
 unique ID is returned. Unique ID is not changed even if it connects it again
 unlike the mail number.
 @c JP
-省略可能な引数@var{msgnum}が指定された場合、@var{msgnum}番のメールをサーバー
-上で一意に識別するユニークIDを返します。引数が省略された場合はメール番号とユ
-ニークIDの連想リストが返されます。ユニークIDはメール番号と違い、接続しなおし
-ても変化しません。
+省略可能な引数@var{msgnum}が指定された場合、メッセージ番号@var{msgnum}のメー
+ルをサーバー上で一意に識別するユニークIDを返します。引数が省略された場合はメッ
+セージ番号とユニークIDの連想リストが返されます。ユニークIDはメッセージ番号と
+違い、接続しなおしても変化しません。
 @c COMMON
 @end deffn

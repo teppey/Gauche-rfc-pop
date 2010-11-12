@@ -37,6 +37,7 @@
 (define-module rfc.pop
   (use gauche.net)
   (use gauche.threads)
+  (use gauche.uvector)
   (use gauche.vport)
   (use srfi-1)
   (use srfi-13)
@@ -282,7 +283,8 @@
 
 (define-method %read-long-response ((conn <pop3-connection>))
   (let* ((in (make <buffered-input-port>
-               :fill (pa$ socket-recv! (socket-of conn))))
+               :fill (cute read-block! <>
+                           (socket-input-port (socket-of conn)))))
          (reader (lambda ()
                    (let1 line (read-line in #t)
                      (cond

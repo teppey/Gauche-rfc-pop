@@ -115,7 +115,7 @@
     ([checker (syntax-rules ()
                 [(_ condition)
                  (lambda (res)
-                   (or (and (string-prefix? "+OK" res) res)
+                   (or (and (string? res) (string-prefix? "+OK" res) res)
                        (error condition res)))])])
     (values (checker <pop3-bad-response-error>)
             (checker <pop3-authentication-error>))))

@@ -162,7 +162,7 @@
                :timeout 10))
 (pop3-connect conn)
 
-(test* "timestamp" *stamp* (ref conn 'stamp))
+(test* "timestamp" *stamp* (ref conn 'apop-stamp))
 
 (test-ok "login ok" (pop3-login conn "user" "pass"))
 

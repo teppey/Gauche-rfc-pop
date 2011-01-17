@@ -143,7 +143,8 @@
   (unwind-protect
     (begin (send-command conn "QUIT")
            (socket-shutdown (socket-of conn) SHUT_WR)
-           (check-response (get-response conn)))
+           (begin0 (check-response (get-response conn))
+                   (socket-shutdown (socket-of conn) SHUT_RD)))
     (begin (socket-close (socket-of conn))
            (set! (socket-of conn) #f))))
 

@@ -1,16 +1,52 @@
 @c EN
+POP3 client module
+
 [Requirements]
 
+    Gauche 0.9 or later
+
 [Install]
+
+    From tarball
+
+        $ gauche-package install [-S root] Gauche-rfc-pop-0.1.tgz
+
+    From source
+
+        $ git clone git://github.com/teppey/Gauche-rfc-pop.git
+        $ cd Gauche-rfc-pop
+        $ ./DIST gen
+        $ ./configure
+        $ make
+        $ make -s check
+        $ [sudo] make install
 
 [Reference]
 
 @Reference@
 
 @c JP
+POP3 クライアントモジュール
+
 [動作環境]
 
+    Gauche 0.9 以降
+
 [インストール]
+
+    From tarball
+
+        $ gauche-package install [-S root] Gauche-rfc-pop-0.1.tgz
+
+    From source
+
+        $ git clone git://github.com/teppey/Gauche-rfc-pop.git
+        $ cd Gauche-rfc-pop
+        $ ./DIST gen
+        $ ./configure
+        $ make
+        $ make -s check
+        $ [sudo] make install
 
 [リファレンス]
 

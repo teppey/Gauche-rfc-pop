@@ -1,7 +1,7 @@
 DIST
 DIST_EXCLUDE_X
-./.git
-./.gitignore
+.git
+.gitignore
 TODO
-mkreadme
 README.skel
+mkreadme

@@ -1,0 +1,7 @@
+DIST
+DIST_EXCLUDE_X
+./.git
+./.gitignore
+TODO
+mkreadme
+README.skel

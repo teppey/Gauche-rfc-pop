@@ -20,31 +20,7 @@ Post Office Protocol - Version 3
 @c EN
 The base class of @code{pop3}-related conditions. Inherits @code{<error>}.
 @c JP
-pop3-関連のコンディションのベースクラスです。@code{<error>}を継承しています。
-@c COMMON
-@end deftp
-
-@deftp {Condition Type} <pop3-authentication-error>
-@clindex pop3-authentication-error
-@c EN
-When the authentication by the server fails, this condition is thrown.
-Inherits @code{<pop3-error>}.
-@c JP
-サーバーでの認証が失敗したときにこのコンディションが投げられます。
-@code{<pop3-error>}を継承しています。
-@c COMMON
-@end deftp
-
-@deftp {Condition Type} <pop3-bad-response-error>
-@clindex pop3-bad-response-error
-@c EN
-It is a condition generated when the error response is received from the server.
-The response is stored in the @code{message} slot.
-Inherits @code{<pop3-error>}.
-@c JP
-サーバーからエラーレスポンスを受け取った場合に発生するコンディションです。
-レスポンスは@code{message}スロットに格納されています。
-@code{<pop3-error>}を継承しています。
+このコンディションはサーバーからエラー応答を受け取ったときに投げられます。@code{<error>}を継承しています。
 @c COMMON
 @end deftp
 

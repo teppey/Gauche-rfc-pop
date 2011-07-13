@@ -166,13 +166,13 @@
 (test-ok "login ok" (begin (pop3-user conn "user")
                            (pop3-pass conn "pass")))
 
-(test* "login ng" (test-error <pop3-authentication-error>)
+(test* "login ng" (test-error)
        (begin (pop3-user conn "user")
               (pop3-pass conn "bad password")))
 
 (test-ok "apop ok" (pop3-apop conn "user" "pass"))
 
-(test* "apop ng" (test-error <pop3-authentication-error>)
+(test* "apop ng" (test-error)
        (pop3-apop conn "user" "bad password"))
 
 (test* "list with arg" 1 (pop3-list conn 1))

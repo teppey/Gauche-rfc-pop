@@ -42,8 +42,6 @@
   (use srfi-1)
   (use srfi-13)
   (export <pop3-error>
-          <pop3-authentication-error>
-          <pop3-bad-response-error>
           <pop3-connection>
           pop3-connect
           pop3-quit
@@ -66,15 +64,10 @@
 (autoload util.digest digest-hexify digest-string)
 
 ;; CRLF
-(define-constant *line-terminator* (string #\x0d #\x0a))
+(define-constant *line-terminator* (string #\cr #\lf))
 
-;;----------------------------------------------------------------------
-;; Conditions
-;;
+;; This condition is thrown when error response is received.
 (define-condition-type <pop3-error> <error> #f)
-(define-condition-type <pop3-authentication-error> <pop3-error> #f)
-(define-condition-type <pop3-bad-response-error> <pop3-error> #f)
-
 
 ;;----------------------------------------------------------------------
 ;; POP3 connection context
@@ -97,15 +90,9 @@
 (define-method get-response ((conn <pop3-connection>))
   (read-line (socket-input-port (~ conn'socket))))
 
-(define-values (check-response check-response-auth)
-  (let-syntax ([checker
-                 (syntax-rules ()
-                   [(_ condition)
-                    (lambda (res)
-                      (or (and (string? res) (string-prefix? "+OK" res) res)
-                          (error condition res)))])])
-    (values (checker <pop3-bad-response-error>)
-            (checker <pop3-authentication-error>))))
+(define (check-response res)
+  (or (and (string? res) (string-prefix? "+OK" res) res)
+      (error <pop3-error> res)))
 
 (define-method send-command ((conn <pop3-connection>) fmt . args)
   (let1 out (socket-output-port (~ conn'socket))
@@ -118,10 +105,7 @@
   (get-response conn))
 
 (define-syntax define-simple-command
-  (syntax-rules (auth)
-    [(_ auth name command args ...)
-     (define-method name ((conn <pop3-connection>) args ...)
-       (check-response-auth (send&recv conn command args ...)))]
+  (syntax-rules ()
     [(_ name command args ...)
      (define-method name ((conn <pop3-connection>) args ...)
        (check-response (send&recv conn command args ...)))]))
@@ -145,7 +129,7 @@
                    (let1 line (read-line in #t)
                      (cond
                        [(eof-object? line)
-                        (error <pop3-bad-response-error> "unexpected EOF")]
+                        (error "unexpected EOF")]
                        [(string-prefix? ".." line)
                         (string-drop line 1)]
                        [(equal? line ".") (eof-object)]
@@ -181,17 +165,17 @@
 ;;
 
 ;; USER <SP> <username> <CRLF>
-(define-simple-command auth pop3-user "USER ~a" username)
+(define-simple-command pop3-user "USER ~a" username)
 
 ;; PASS <SP> <password> <CRLF>
-(define-simple-command auth pop3-pass "PASS ~a" password)
+(define-simple-command pop3-pass "PASS ~a" password)
 
 ;; STAT <CRLF>
 (define-method pop3-stat ((conn <pop3-connection>))
   (let1 res (check-response (send&recv conn "STAT"))
     (if-let1 m (#/^\+OK\s+(\d+)\s+(\d+)/ res)
       (values (string->number (m 1)) (string->number (m 2)))
-      (error <pop3-bad-response-error> "wrong response format:" res))))
+      (error <pop3-error> "wrong response format:" res))))
 
 ;; LIST [<SP> <number>] <CRLF>
 (define-method pop3-list ((conn <pop3-connection>) . args)
@@ -199,7 +183,7 @@
     (let1 res (check-response (send&recv conn "LIST ~d" msgnum))
       (if-let1 m (#/^\+OK\s+\d+\s+(\d+)$/ res)
         (string->number (m 1))
-        (error <pop3-bad-response-error> "bad response:" res))))
+        (error <pop3-error> "wrong response format:" res))))
   (define (multi)
     (check-response (send&recv conn "LIST"))
     (let1 lines (%long-response-to-string conn)
@@ -240,8 +224,8 @@
         (let1 digest (string-downcase
                        (digest-hexify
                          (digest-string <md5> #`",(m),|password|")))
-          (check-response-auth (send&recv conn "APOP ~a ~a" username digest))))
-      (error <pop3-authentication-error> "not APOP server; cannot login")))
+          (check-response (send&recv conn "APOP ~a ~a" username digest))))
+      (error <pop3-error> "not APOP server; cannot login")))
 
 ;; TOP <SP> <number> <SP> <lines> <CRLF>
 (define-fetch-method pop3-top "TOP ~d ~d" msgnum nlines)
@@ -252,7 +236,7 @@
     (let1 res (check-response (send&recv conn "UIDL ~d" msgnum))
       (if-let1 m (#/^\+OK\s+\d+\s+(.+)$/ res)
         (m 1)
-        (error <pop3-bad-response-error> "bad response:" res))))
+        (error <pop3-error> "wrong response format:" res))))
   (define (multi)
     (check-response (send&recv conn "UIDL"))
     (let1 lines (%long-response-to-string conn)

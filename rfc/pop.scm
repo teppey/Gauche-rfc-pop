@@ -87,8 +87,7 @@
    (port   :init-keyword :port :init-value 110)
    (socket :init-keyword :socket :init-value #f)
    (timeout :init-keyword :timeout :init-value 30)
-   (greeting :init-value #f)
-   (apop-stamp :init-value #f)))
+   (greeting :init-value #f)))
 
 (define-method pop3-connect ((conn <pop3-connection>))
   (with-timeout (ref conn 'timeout)
@@ -96,8 +95,7 @@
       (set! (~ conn'socket)
         (make-client-socket 'inet (~ conn'host) (~ conn'port)))
         (rlet1 res (check-response (get-response conn))
-          (and-let* ((m (#/<.*>/ res)))
-            (set! (ref conn 'apop-stamp) (m)))))
+          (set! (~ conn'greeting) res)))
     (lambda ()
       (error <pop3-timeout-error>
              "cannot connect server; connection timeout"))))
@@ -173,12 +171,13 @@
 
 ;; APOP <SP> <username> <SP> <digest> <CRLF>
 (define-method pop3-apop ((conn <pop3-connection>) username password)
-  (unless (ref conn 'apop-stamp)
-    (error <pop3-authentication-error> "not APOP server; cannot login"))
-  (let1 digest (string-downcase
-                 (digest-hexify
-                   (digest-string <md5> #`",(ref conn 'apop-stamp),|password|")))
-    (check-response-auth (send&recv conn "APOP ~a ~a" username digest))))
+  (or (and-let* ([s (~ conn'greeting)]
+                 [m (#/<.*>/ s)])
+        (let1 digest (string-downcase
+                       (digest-hexify
+                         (digest-string <md5> #`",(m),|password|")))
+          (check-response-auth (send&recv conn "APOP ~a ~a" username digest))))
+      (error <pop3-authentication-error> "not APOP server; cannot login")))
 
 ;; STAT <CRLF>
 (define-method pop3-stat ((conn <pop3-connection>))

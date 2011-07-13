@@ -82,22 +82,19 @@
 ;;----------------------------------------------------------------------
 ;; POP3 connection context
 ;;
-(define-constant *default-pop3-port* 110)
-(define-constant *default-connection-timeout* 30)
-
 (define-class <pop3-connection> ()
-  ((host   :init-keyword :host   :init-value #f :accessor host-of)
-   (port   :init-keyword :port   :init-value *default-pop3-port*
-           :accessor port-of)
-   (socket :init-keyword :socket :init-value #f :accessor socket-of)
-   (timeout :init-keyword :timeout :init-value *default-connection-timeout*)
+  ((host   :init-keyword :host :init-value #f)
+   (port   :init-keyword :port :init-value 110)
+   (socket :init-keyword :socket :init-value #f)
+   (timeout :init-keyword :timeout :init-value 30)
+   (greeting :init-value #f)
    (apop-stamp :init-value #f)))
 
 (define-method pop3-connect ((conn <pop3-connection>))
   (with-timeout (ref conn 'timeout)
     (lambda ()
-      (set! (socket-of conn)
-        (make-client-socket 'inet (host-of conn) (port-of conn)))
+      (set! (~ conn'socket)
+        (make-client-socket 'inet (~ conn'host) (~ conn'port)))
         (rlet1 res (check-response (get-response conn))
           (and-let* ((m (#/<.*>/ res)))
             (set! (ref conn 'apop-stamp) (m)))))
@@ -106,7 +103,7 @@
              "cannot connect server; connection timeout"))))
 
 (define-method get-response ((conn <pop3-connection>))
-  (read-line (socket-input-port (socket-of conn))))
+  (read-line (socket-input-port (~ conn'socket))))
 
 (define-values (check-response check-response-auth)
   (let-syntax
@@ -123,7 +120,7 @@
 ;; POP3 commands
 ;;
 (define-method send-command ((conn <pop3-connection>) fmt . args)
-  (let1 out (socket-output-port (socket-of conn))
+  (let1 out (socket-output-port (~ conn'socket))
     (with-signal-handlers ((SIGPIPE => #f))
       (lambda ()
         (apply format out #`",|fmt|,|*line-terminator*|" args)))))
@@ -140,11 +137,11 @@
 (define-method pop3-quit ((conn <pop3-connection>))
   (unwind-protect
     (begin (send-command conn "QUIT")
-           (socket-shutdown (socket-of conn) SHUT_WR)
+           (socket-shutdown (~ conn'socket) SHUT_WR)
            (begin0 (check-response (get-response conn))
-                   (socket-shutdown (socket-of conn) SHUT_RD)))
-    (begin (socket-close (socket-of conn))
-           (set! (socket-of conn) #f))))
+                   (socket-shutdown (~ conn'socket) SHUT_RD)))
+    (begin (socket-close (~ conn'socket))
+           (set! (~ conn'socket) #f))))
 
 (define-syntax define-simple-command
   (syntax-rules (auth)
@@ -285,7 +282,7 @@
 (define-method %read-long-response ((conn <pop3-connection>))
   (let* ((in (make <buffered-input-port>
                :fill (cute read-block! <>
-                           (socket-input-port (socket-of conn)))))
+                           (socket-input-port (~ conn'socket)))))
          (reader (lambda ()
                    (let1 line (read-line in #t)
                      (cond

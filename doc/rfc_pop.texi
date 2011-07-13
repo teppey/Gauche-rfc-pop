@@ -164,16 +164,6 @@ PASSコマンドを@var{password}とともにサーバーに送り、レスポ�
 @c COMMON
 @end deffn
 
-@deffn {Method} pop3-login (conn <pop3-connection>) username password
-@c EN
-Login to the server by using @code{pop3-user} and @code{pop3-pass}.
-If login failure, @code{<pop3-authentication-error} is generated.
-@c JP
-@code{pop3-user}と@code{pop3-pass}を使用してサーバーにログインします。
-ログインに失敗すると@code{<pop3-authentication-error>}コンディションが発生します。
-@c COMMON
-@end deffn
-
 @deffn {Method} pop3-apop (conn <pop3-connection>) username password
 @c EN
 Login to the server by @code{APOP} method.

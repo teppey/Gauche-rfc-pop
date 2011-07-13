@@ -49,7 +49,6 @@
           pop3-quit
           pop3-user
           pop3-pass
-          pop3-login
           pop3-apop
           pop3-stat
           pop3-retr
@@ -234,11 +233,6 @@
     (begin (socket-close (~ conn'socket))
            (set! (~ conn'socket) #f))))
 
-
-(define-method pop3-login ((conn <pop3-connection>) username password)
-  (pop3-user conn username)
-  (pop3-pass conn password))
-
 ;; APOP <SP> <username> <SP> <digest> <CRLF>
 (define-method pop3-apop ((conn <pop3-connection>) username password)
   (or (and-let* ([s (~ conn'greeting)]
@@ -288,7 +282,8 @@
         (unwind-protect
           (begin (if apop
                    (pop3-apop conn username password)
-                   (pop3-login conn username password))
+                   (begin (pop3-user conn username)
+                          (pop3-pass conn password)))
                  (proc conn))
           (pop3-quit conn))))))
 

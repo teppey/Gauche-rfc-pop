@@ -163,10 +163,12 @@
 
 (test* "timestamp" *stamp* ((#/<.*>/ (~ conn'greeting))))
 
-(test-ok "login ok" (pop3-login conn "user" "pass"))
+(test-ok "login ok" (begin (pop3-user conn "user")
+                           (pop3-pass conn "pass")))
 
 (test* "login ng" (test-error <pop3-authentication-error>)
-       (pop3-login conn "user" "bad password"))
+       (begin (pop3-user conn "user")
+              (pop3-pass conn "bad password")))
 
 (test-ok "apop ok" (pop3-apop conn "user" "pass"))
 

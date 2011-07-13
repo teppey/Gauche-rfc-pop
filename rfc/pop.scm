@@ -178,8 +178,9 @@
 (define-method pop3-apop ((conn <pop3-connection>) username password)
   (unless (ref conn 'apop-stamp)
     (error <pop3-authentication-error> "not APOP server; cannot login"))
-  (let1 digest (digest-hexify
-                 (digest-string <md5> #`",(ref conn 'apop-stamp),|password|"))
+  (let1 digest (string-downcase
+                 (digest-hexify
+                   (digest-string <md5> #`",(ref conn 'apop-stamp),|password|")))
     (check-response-auth (send&recv conn "APOP ~a ~a" username digest))))
 
 ;; STAT <CRLF>

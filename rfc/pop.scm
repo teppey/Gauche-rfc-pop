@@ -249,10 +249,11 @@
     (receive (h p) (string-scan host #\: 'both)
       (if (and h p)
         (values h (string->number p))
-        (values host *default-pop3-port*))))
+        (values host #f))))
   (let-keywords options ([apop #f])
     (receive (host port) (ensure-host&port host)
-      (let1 conn (make <pop3-connection> :host host :port port)
+      (let1 conn (make <pop3-connection> :host host)
+        (when port (set! (~ conn'port) port))
         (pop3-connect conn)
         (unwind-protect
           (begin (if apop

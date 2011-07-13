@@ -61,8 +61,7 @@
           pop3-list
           pop3-uidl
           call-with-pop3-connection
-          )
-  )
+          ))
 (select-module rfc.pop)
 
 (autoload rfc.md5 <md5>)
@@ -74,16 +73,15 @@
 ;;----------------------------------------------------------------------
 ;; Conditions
 ;;
-
 (define-condition-type <pop3-error> <error> #f)
 (define-condition-type <pop3-timeout-error> <pop3-error> #f)
 (define-condition-type <pop3-authentication-error> <pop3-error> #f)
 (define-condition-type <pop3-bad-response-error> <pop3-error> #f)
 
+
 ;;----------------------------------------------------------------------
 ;; POP3 connection context
 ;;
-
 (define-constant *default-pop3-port* 110)
 (define-constant *default-connection-timeout* 30)
 
@@ -120,10 +118,10 @@
     (values (checker <pop3-bad-response-error>)
             (checker <pop3-authentication-error>))))
 
+
 ;;----------------------------------------------------------------------
 ;; POP3 commands
 ;;
-
 (define-method send-command ((conn <pop3-connection>) fmt . args)
   (let1 out (socket-output-port (socket-of conn))
     (with-signal-handlers ((SIGPIPE => #f))
@@ -244,10 +242,10 @@
   (let1 msgnum (get-optional args #f)
     (if msgnum (single msgnum) (multi))))
 
+
 ;;----------------------------------------------------------------------
 ;; Convenient procedure
 ;;
-
 (define (call-with-pop3-connection host username password proc . options)
   (define (ensure-host&port host)
     (receive (h p) (string-scan host #\: 'both)
@@ -264,6 +262,7 @@
                    (pop3-login conn username password))
                  (proc conn))
           (pop3-quit conn))))))
+
 
 ;;----------------------------------------------------------------------
 ;; Utility functions
@@ -302,5 +301,3 @@
 
 (define-method %long-response-to-string ((conn <pop3-connection>))
   (with-output-to-string (lambda () (%read-long-response conn))))
-
-(provide "rfc/pop")

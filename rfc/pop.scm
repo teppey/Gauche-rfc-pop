@@ -186,7 +186,7 @@
       (values (string->number (m 1)) (string->number (m 2)))
       (error <pop3-bad-response-error> "wrong response format:" res))))
 
-(define-syntax define-fetche-method
+(define-syntax define-fetch-method
   (syntax-rules ()
     [(_ name command args ...)
      (define-method name ((conn <pop3-connection>) args ... . options)
@@ -198,10 +198,10 @@
          (flusher sink)))]))
 
 ;; RETR <SP> <number> <CRLF>
-(define-fetche-method pop3-retr "RETR ~d" msgnum)
+(define-fetch-method pop3-retr "RETR ~d" msgnum)
 
 ;; TOP <SP> <number> <SP> <lines> <CRLF>
-(define-fetche-method pop3-top "TOP ~d ~d" msgnum nlines)
+(define-fetch-method pop3-top "TOP ~d ~d" msgnum nlines)
 
 ;; LIST [<SP> <number>] <CRLF>
 (define-method pop3-list ((conn <pop3-connection>) . args)

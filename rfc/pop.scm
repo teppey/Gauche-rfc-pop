@@ -83,7 +83,7 @@
 (define-class <pop3-connection> ()
   ((host   :init-keyword :host :init-value #f)
    (port   :init-keyword :port :init-value 110)
-   (socket :init-keyword :socket :init-value #f)
+   (socket :init-value #f)
    (greeting :init-value #f)))
 
 (define-method pop3-connect ((conn <pop3-connection>))

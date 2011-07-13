@@ -158,8 +158,7 @@
 
 (define conn (make <pop3-connection>
                :host "localhost"
-               :port *testsrv-port*
-               :timeout 10))
+               :port *testsrv-port*))
 (pop3-connect conn)
 
 (test* "timestamp" *stamp* ((#/<.*>/ (~ conn'greeting))))

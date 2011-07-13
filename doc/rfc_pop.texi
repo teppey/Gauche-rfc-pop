@@ -24,17 +24,6 @@ pop3-関連のコンディションのベースクラスです。@code{<error>}�
 @c COMMON
 @end deftp
 
-@deftp {Condition Type} <pop3-timeout-error>
-@clindex pop3-timeout-error
-@c EN
-This condition raise when there is no reponse from the server during the
-fixed time. Inherits @code{<pop3-error>}.
-@c JP
-このコンディションはサーバーからの応答が一定時間なかった場合に発生します。
-@code{<pop3-error>}を継承しています。
-@c COMMON
-@end deftp
-
 @deftp {Condition Type} <pop3-authentication-error>
 @clindex pop3-authentication-error
 @c EN
@@ -84,18 +73,6 @@ POP3サーバーのポート番号。デフォルトでは110です。
 @c COMMON
 @end defivar
 
-@defivar {<pop3-connection>} timeout
-@c EN
-Seconds for connection waiting. If it is not possible to connect it even if
-this number of seconds passes, @code{<pop3-timeout-error>} condition is
-generated.
-The default value is 30 seconds.
-@c JP
-接続時に待つ最大秒数。この秒数が経過しても接続できなければ
-@code{<pop3-timeout-error>}コンディションが発生します。
-デフォルトでは30秒です。
-@c COMMON
-@end defivar
 @end deftp
 
 @defun call-with-pop3-connection host username password proc &keyword apop

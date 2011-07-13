@@ -42,7 +42,6 @@
   (use srfi-1)
   (use srfi-13)
   (export <pop3-error>
-          <pop3-timeout-error>
           <pop3-authentication-error>
           <pop3-bad-response-error>
           <pop3-connection>
@@ -74,7 +73,6 @@
 ;; Conditions
 ;;
 (define-condition-type <pop3-error> <error> #f)
-(define-condition-type <pop3-timeout-error> <pop3-error> #f)
 (define-condition-type <pop3-authentication-error> <pop3-error> #f)
 (define-condition-type <pop3-bad-response-error> <pop3-error> #f)
 
@@ -86,19 +84,13 @@
   ((host   :init-keyword :host :init-value #f)
    (port   :init-keyword :port :init-value 110)
    (socket :init-keyword :socket :init-value #f)
-   (timeout :init-keyword :timeout :init-value 30)
    (greeting :init-value #f)))
 
 (define-method pop3-connect ((conn <pop3-connection>))
-  (with-timeout (ref conn 'timeout)
-    (lambda ()
-      (set! (~ conn'socket)
-        (make-client-socket 'inet (~ conn'host) (~ conn'port)))
-        (rlet1 res (check-response (get-response conn))
-          (set! (~ conn'greeting) res)))
-    (lambda ()
-      (error <pop3-timeout-error>
-             "cannot connect server; connection timeout"))))
+  (set! (~ conn'socket)
+    (make-client-socket 'inet (~ conn'host) (~ conn'port)))
+  (rlet1 res (check-response (get-response conn))
+    (set! (~ conn'greeting) res)))
 
 (define-method get-response ((conn <pop3-connection>))
   (read-line (socket-input-port (~ conn'socket))))
@@ -124,12 +116,8 @@
         (apply format out #`",|fmt|,|*line-terminator*|" args)))))
 
 (define-method send&recv ((conn <pop3-connection>) fmt . args)
-  (with-timeout (ref conn 'timeout)
-    (lambda ()
-      (apply send-command conn fmt args)
-      (get-response conn))
-    (lambda ()
-      (error <pop3-timeout-error> "connection timeout"))))
+  (apply send-command conn fmt args)
+  (get-response conn))
 
 ;; QUIT <CRLF>
 (define-method pop3-quit ((conn <pop3-connection>))
@@ -265,20 +253,6 @@
 ;;----------------------------------------------------------------------
 ;; Utility functions
 ;;
-
-;; from trunk/lib/net/client.scm
-(define (with-timeout timeout thunk . opt-handler)
-  (let1 handler (get-optional opt-handler (lambda () #f))
-    (if (and timeout (> timeout 0))
-      (let1 thread (make-thread thunk)
-        (thread-start! thread)
-        (guard (exc [(join-timeout-exception? exc)
-                     (thread-terminate! thread)
-                     (handler)]
-                    [else (raise exc)])
-          (thread-join! thread timeout)))
-      (thunk))))
-
 (define-method %read-long-response ((conn <pop3-connection>))
   (let* ((in (make <buffered-input-port>
                :fill (cute read-block! <>

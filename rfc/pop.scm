@@ -87,28 +87,27 @@
    (greeting :init-value #f)))
 
 (define-method pop3-connect ((conn <pop3-connection>))
-  (set! (~ conn'socket)
-    (make-client-socket 'inet (~ conn'host) (~ conn'port)))
+  (set! (~ conn'socket) (make-client-socket 'inet (~ conn'host) (~ conn'port)))
   (rlet1 res (check-response (get-response conn))
     (set! (~ conn'greeting) res)))
 
+
+;;----------------------------------------------------------------------
+;; Utility functions and macros
+;;
 (define-method get-response ((conn <pop3-connection>))
   (read-line (socket-input-port (~ conn'socket))))
 
 (define-values (check-response check-response-auth)
-  (let-syntax
-    ([checker (syntax-rules ()
-                [(_ condition)
-                 (lambda (res)
-                   (or (and (string? res) (string-prefix? "+OK" res) res)
-                       (error condition res)))])])
+  (let-syntax ([checker
+                 (syntax-rules ()
+                   [(_ condition)
+                    (lambda (res)
+                      (or (and (string? res) (string-prefix? "+OK" res) res)
+                          (error condition res)))])])
     (values (checker <pop3-bad-response-error>)
             (checker <pop3-authentication-error>))))
 
-
-;;----------------------------------------------------------------------
-;; POP3 commands
-;;
 (define-method send-command ((conn <pop3-connection>) fmt . args)
   (let1 out (socket-output-port (~ conn'socket))
     (with-signal-handlers ((SIGPIPE => #f))
@@ -119,16 +118,6 @@
   (apply send-command conn fmt args)
   (get-response conn))
 
-;; QUIT <CRLF>
-(define-method pop3-quit ((conn <pop3-connection>))
-  (unwind-protect
-    (begin (send-command conn "QUIT")
-           (socket-shutdown (~ conn'socket) SHUT_WR)
-           (begin0 (check-response (get-response conn))
-                   (socket-shutdown (~ conn'socket) SHUT_RD)))
-    (begin (socket-close (~ conn'socket))
-           (set! (~ conn'socket) #f))))
-
 (define-syntax define-simple-command
   (syntax-rules (auth)
     [(_ auth name command args ...)
@@ -137,42 +126,6 @@
     [(_ name command args ...)
      (define-method name ((conn <pop3-connection>) args ...)
        (check-response (send&recv conn command args ...)))]))
-
-;; USER <SP> <username> <CRLF>
-(define-simple-command auth pop3-user "USER ~a" username)
-
-;; PASS <SP> <password> <CRLF>
-(define-simple-command auth pop3-pass "PASS ~a" password)
-
-;; DELE <SP> <number> <CRLF>
-(define-simple-command pop3-dele "DELE ~d" msgnum)
-
-;; NOOP <CRLF>
-(define-simple-command pop3-noop "NOOP")
-
-;; RSET <CRLF>
-(define-simple-command pop3-rset "RSET")
-
-(define-method pop3-login ((conn <pop3-connection>) username password)
-  (pop3-user conn username)
-  (pop3-pass conn password))
-
-;; APOP <SP> <username> <SP> <digest> <CRLF>
-(define-method pop3-apop ((conn <pop3-connection>) username password)
-  (or (and-let* ([s (~ conn'greeting)]
-                 [m (#/<.*>/ s)])
-        (let1 digest (string-downcase
-                       (digest-hexify
-                         (digest-string <md5> #`",(m),|password|")))
-          (check-response-auth (send&recv conn "APOP ~a ~a" username digest))))
-      (error <pop3-authentication-error> "not APOP server; cannot login")))
-
-;; STAT <CRLF>
-(define-method pop3-stat ((conn <pop3-connection>))
-  (let1 res (check-response (send&recv conn "STAT"))
-    (if-let1 m (#/^\+OK\s+(\d+)\s+(\d+)/ res)
-      (values (string->number (m 1)) (string->number (m 2)))
-      (error <pop3-bad-response-error> "wrong response format:" res))))
 
 (define-syntax define-fetch-method
   (syntax-rules ()
@@ -185,11 +138,61 @@
            (lambda () (%read-long-response conn)))
          (flusher sink)))]))
 
-;; RETR <SP> <number> <CRLF>
-(define-fetch-method pop3-retr "RETR ~d" msgnum)
+(define-method %read-long-response ((conn <pop3-connection>))
+  (let* ((in (make <buffered-input-port>
+               :fill (cute read-block! <>
+                           (socket-input-port (~ conn'socket)))))
+         (reader (lambda ()
+                   (let1 line (read-line in #t)
+                     (cond
+                       [(eof-object? line)
+                        (error <pop3-bad-response-error> "unexpected EOF")]
+                       [(string-prefix? ".." line)
+                        (string-drop line 1)]
+                       [(equal? line ".") (eof-object)]
+                       [else line])))))
+    (port-for-each (lambda (line)
+                     (display line)
+                     (display *line-terminator*))
+                   reader)))
 
-;; TOP <SP> <number> <SP> <lines> <CRLF>
-(define-fetch-method pop3-top "TOP ~d ~d" msgnum nlines)
+(define-method %long-response-to-string ((conn <pop3-connection>))
+  (with-output-to-string (lambda () (%read-long-response conn))))
+
+
+;;----------------------------------------------------------------------
+;; POP3 commands
+;;
+;;
+;;  Minimal POP3 commands:
+;;    USER name
+;;    PASS string
+;;    STAT
+;;    LIST [msg]
+;;    RETR [msg]
+;;    DELE [msg]
+;;    NOOP
+;;    RSET
+;;    QUIT
+;;
+;;  Optional POP3 commands:
+;;    APOP name digest
+;;    TOP msg n
+;;    UIDL [msg]
+;;
+
+;; USER <SP> <username> <CRLF>
+(define-simple-command auth pop3-user "USER ~a" username)
+
+;; PASS <SP> <password> <CRLF>
+(define-simple-command auth pop3-pass "PASS ~a" password)
+
+;; STAT <CRLF>
+(define-method pop3-stat ((conn <pop3-connection>))
+  (let1 res (check-response (send&recv conn "STAT"))
+    (if-let1 m (#/^\+OK\s+(\d+)\s+(\d+)/ res)
+      (values (string->number (m 1)) (string->number (m 2)))
+      (error <pop3-bad-response-error> "wrong response format:" res))))
 
 ;; LIST [<SP> <number>] <CRLF>
 (define-method pop3-list ((conn <pop3-connection>) . args)
@@ -208,6 +211,46 @@
                   (string-split lines *line-terminator*))))
   (let1 msgnum (get-optional args #f)
     (if msgnum (single msgnum) (multi))))
+
+;; RETR <SP> <number> <CRLF>
+(define-fetch-method pop3-retr "RETR ~d" msgnum)
+
+;; DELE <SP> <number> <CRLF>
+(define-simple-command pop3-dele "DELE ~d" msgnum)
+
+;; NOOP <CRLF>
+(define-simple-command pop3-noop "NOOP")
+
+;; RSET <CRLF>
+(define-simple-command pop3-rset "RSET")
+
+;; QUIT <CRLF>
+(define-method pop3-quit ((conn <pop3-connection>))
+  (unwind-protect
+    (begin (send-command conn "QUIT")
+           (socket-shutdown (~ conn'socket) SHUT_WR)
+           (begin0 (check-response (get-response conn))
+                   (socket-shutdown (~ conn'socket) SHUT_RD)))
+    (begin (socket-close (~ conn'socket))
+           (set! (~ conn'socket) #f))))
+
+
+(define-method pop3-login ((conn <pop3-connection>) username password)
+  (pop3-user conn username)
+  (pop3-pass conn password))
+
+;; APOP <SP> <username> <SP> <digest> <CRLF>
+(define-method pop3-apop ((conn <pop3-connection>) username password)
+  (or (and-let* ([s (~ conn'greeting)]
+                 [m (#/<.*>/ s)])
+        (let1 digest (string-downcase
+                       (digest-hexify
+                         (digest-string <md5> #`",(m),|password|")))
+          (check-response-auth (send&recv conn "APOP ~a ~a" username digest))))
+      (error <pop3-authentication-error> "not APOP server; cannot login")))
+
+;; TOP <SP> <number> <SP> <lines> <CRLF>
+(define-fetch-method pop3-top "TOP ~d ~d" msgnum nlines)
 
 ;; UIDL [<SP> <number>] <CRLF>
 (define-method pop3-uidl ((conn <pop3-connection>) . args)
@@ -249,27 +292,3 @@
                  (proc conn))
           (pop3-quit conn))))))
 
-
-;;----------------------------------------------------------------------
-;; Utility functions
-;;
-(define-method %read-long-response ((conn <pop3-connection>))
-  (let* ((in (make <buffered-input-port>
-               :fill (cute read-block! <>
-                           (socket-input-port (~ conn'socket)))))
-         (reader (lambda ()
-                   (let1 line (read-line in #t)
-                     (cond
-                       [(eof-object? line)
-                        (error <pop3-bad-response-error> "unexpected EOF")]
-                       [(string-prefix? ".." line)
-                        (string-drop line 1)]
-                       [(equal? line ".") (eof-object)]
-                       [else line])))))
-    (port-for-each (lambda (line)
-                     (display line)
-                     (display *line-terminator*))
-                   reader)))
-
-(define-method %long-response-to-string ((conn <pop3-connection>))
-  (with-output-to-string (lambda () (%read-long-response conn))))

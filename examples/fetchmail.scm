@@ -20,7 +20,7 @@
     (unless (file-is-executable? *mda*)
       (error "cannot execute:" *mda*))
 
-    (call-with-pop3-connection *server* *username* *password*
+    (call-with-pop3-connection *server*
       (lambda (conn)
         (receive (count size) (pop3-stat conn)
           (format #t "~d messags for ~a at ~a (~d octets).\n"
@@ -42,7 +42,8 @@
                           *username* *server* num count size
                           (if keep "not flushed" "flushed"))
                   (unless keep (pop3-dele conn num))))
-              (pop3-list conn))))))
+              (pop3-list conn)))))
+      :username *username* :password *password*)
 
     (exit 0)))
 

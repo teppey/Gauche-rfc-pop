@@ -249,7 +249,8 @@
 ;;----------------------------------------------------------------------
 ;; Convenient procedure
 ;;
-(define (call-with-pop3-connection host username password proc :key (apop #f))
+(define (call-with-pop3-connection host proc
+                                   :key (username #f) (password #f) (apop #f))
   (define (ensure-host&port host)
     (receive (h p) (string-scan host #\: 'both)
       (if (and h p)
@@ -258,10 +259,12 @@
   (receive (host port) (ensure-host&port host)
     (let1 conn (make-pop3-connection host port)
       (unwind-protect
-        (begin (if apop
-                 (pop3-apop conn username password)
-                 (begin (pop3-user conn username)
-                        (pop3-pass conn password)))
+        (begin (cond [(and username password)
+                      (if apop
+                        (pop3-apop conn username password)
+                        (begin (pop3-user conn username)
+                               (pop3-pass conn password)))]
+                     [username (pop3-user conn username)])
                (proc conn))
         (pop3-quit conn)))))
 

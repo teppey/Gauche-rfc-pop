@@ -87,20 +87,20 @@
 ;;----------------------------------------------------------------------
 ;; Utility functions and macros
 ;;
-(define-method get-response ((conn <pop3-connection>))
+(define (get-response conn)
   (read-line (socket-input-port (~ conn'socket))))
 
 (define (check-response res)
   (or (and (string? res) (string-prefix? "+OK" res) res)
       (error <pop3-error> res)))
 
-(define-method send-command ((conn <pop3-connection>) fmt . args)
+(define (send-command conn fmt . args)
   (let1 out (socket-output-port (~ conn'socket))
     (with-signal-handlers ((SIGPIPE => #f))
       (lambda ()
         (apply format out #`",|fmt|,|*line-terminator*|" args)))))
 
-(define-method send&recv ((conn <pop3-connection>) fmt . args)
+(define (send&recv conn fmt . args)
   (apply send-command conn fmt args)
   (get-response conn))
 
@@ -117,14 +117,11 @@
        (let-keywords options ((sink (open-output-string))
                               (flusher get-output-string))
          (check-response (send&recv conn command args ...))
-         (with-output-to-port sink
-           (lambda () (%read-long-response conn)))
+         (with-ports (socket-input-port (~ conn'socket)) sink #f %read-long-response)
          (flusher sink)))]))
 
-(define-method %read-long-response ((conn <pop3-connection>))
-  (let* ((in (make <buffered-input-port>
-               :fill (cute read-block! <>
-                           (socket-input-port (~ conn'socket)))))
+(define (%read-long-response)
+  (let* ((in (make <buffered-input-port> :fill read-block!))
          (reader (lambda ()
                    (let1 line (read-line in #t)
                      (cond
@@ -139,8 +136,11 @@
                      (display *line-terminator*))
                    reader)))
 
-(define-method %long-response-to-string ((conn <pop3-connection>))
-  (with-output-to-string (lambda () (%read-long-response conn))))
+(define (%long-response-to-string conn)
+  (with-output-to-string
+    (lambda ()
+      (with-input-from-port (socket-input-port (~ conn'socket))
+        %read-long-response))))
 
 
 ;;----------------------------------------------------------------------

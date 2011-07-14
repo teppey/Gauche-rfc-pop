@@ -209,11 +209,9 @@
 ;; QUIT <CRLF>
 (define-method pop3-quit ((conn <pop3-connection>))
   (unwind-protect
-    (begin (send-command conn "QUIT")
-           (socket-shutdown (~ conn'socket) SHUT_WR)
-           (begin0 (check-response (get-response conn))
-                   (socket-shutdown (~ conn'socket) SHUT_RD)))
-    (begin (socket-close (~ conn'socket))
+    (check-response (send&recv conn "QUIT"))
+    (begin (socket-shutdown (~ conn'socket) SHUT_RDWR)
+           (socket-close (~ conn'socket))
            (set! (~ conn'socket) #f))))
 
 ;; APOP <SP> <username> <SP> <digest> <CRLF>

@@ -156,10 +156,7 @@
            #`"localhost:,*testsrv-port*" "user" "pass"
            (lambda (conn) (pop3-noop conn))))
 
-(define conn (make <pop3-connection>
-               :host "localhost"
-               :port *testsrv-port*))
-(pop3-connect conn)
+(define conn (make-pop3-connection "localhost" *testsrv-port*))
 
 (test* "timestamp" *stamp* ((#/<.*>/ (~ conn'greeting))))
 
@@ -210,7 +207,7 @@
 
 
 ;; epilogue
-(pop3-connect conn)
+(define conn (make-pop3-connection "localhost" *testsrv-port*))
 (display "_EXIT\r\n" (socket-output-port (ref conn 'socket)))
 (read-line (socket-input-port (ref conn 'socket)))
 (sys-waitpid -1)

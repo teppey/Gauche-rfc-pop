@@ -36,14 +36,14 @@
 
 (define-module rfc.pop
   (use gauche.net)
-  (use gauche.threads)
-  (use gauche.uvector)
-  (use gauche.vport)
-  (use srfi-1)
+  (use gauche.uvector :only (read-block!))
+  (use gauche.vport :only (<buffered-input-port>))
+  (use srfi-1 :only (filter-map))
   (use srfi-13)
   (export <pop3-error>
           <pop3-connection>
-          pop3-connect
+          ;pop3-connect
+          make-pop3-connection
           pop3-quit
           pop3-user
           pop3-pass
@@ -72,16 +72,16 @@
 ;;----------------------------------------------------------------------
 ;; POP3 connection context
 ;;
+(define-constant *default-pop3-port* 110)
+
 (define-class <pop3-connection> ()
-  ((host   :init-keyword :host :init-value #f)
-   (port   :init-keyword :port :init-value 110)
-   (socket :init-value #f)
+  ((socket :init-value #f)
    (greeting :init-value #f)))
 
-(define-method pop3-connect ((conn <pop3-connection>))
-  (set! (~ conn'socket) (make-client-socket 'inet (~ conn'host) (~ conn'port)))
-  (rlet1 res (check-response (get-response conn))
-    (set! (~ conn'greeting) res)))
+(define (make-pop3-connection host :optional (port *default-pop3-port*))
+  (rlet1 conn (make <pop3-connection>)
+    (set! (~ conn'socket) (make-client-socket 'inet host port))
+    (set! (~ conn'greeting) (check-response (get-response conn)))))
 
 
 ;;----------------------------------------------------------------------
@@ -257,12 +257,10 @@
     (receive (h p) (string-scan host #\: 'both)
       (if (and h p)
         (values h (string->number p))
-        (values host #f))))
+        (values host *default-pop3-port*))))
   (let-keywords options ([apop #f])
     (receive (host port) (ensure-host&port host)
-      (let1 conn (make <pop3-connection> :host host)
-        (when port (set! (~ conn'port) port))
-        (pop3-connect conn)
+      (let1 conn (make-pop3-connection host port)
         (unwind-protect
           (begin (if apop
                    (pop3-apop conn username password)

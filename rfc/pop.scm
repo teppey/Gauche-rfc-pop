@@ -42,19 +42,18 @@
   (use srfi-13)
   (export <pop3-error>
           <pop3-connection>
-          ;pop3-connect
           make-pop3-connection
-          pop3-quit
           pop3-user
           pop3-pass
-          pop3-apop
           pop3-stat
-          pop3-retr
-          pop3-top
+          pop3-list
           pop3-dele
+          pop3-retr
           pop3-noop
           pop3-rset
-          pop3-list
+          pop3-quit
+          pop3-apop
+          pop3-top
           pop3-uidl
           call-with-pop3-connection
           ))
@@ -252,20 +251,19 @@
 ;;----------------------------------------------------------------------
 ;; Convenient procedure
 ;;
-(define (call-with-pop3-connection host username password proc . options)
+(define (call-with-pop3-connection host username password proc :key (apop #f))
   (define (ensure-host&port host)
     (receive (h p) (string-scan host #\: 'both)
       (if (and h p)
         (values h (string->number p))
         (values host *default-pop3-port*))))
-  (let-keywords options ([apop #f])
-    (receive (host port) (ensure-host&port host)
-      (let1 conn (make-pop3-connection host port)
-        (unwind-protect
-          (begin (if apop
-                   (pop3-apop conn username password)
-                   (begin (pop3-user conn username)
-                          (pop3-pass conn password)))
-                 (proc conn))
-          (pop3-quit conn))))))
+  (receive (host port) (ensure-host&port host)
+    (let1 conn (make-pop3-connection host port)
+      (unwind-protect
+        (begin (if apop
+                 (pop3-apop conn username password)
+                 (begin (pop3-user conn username)
+                        (pop3-pass conn password)))
+               (proc conn))
+        (pop3-quit conn)))))
 

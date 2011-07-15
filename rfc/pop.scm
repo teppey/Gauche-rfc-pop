@@ -38,7 +38,6 @@
   (use gauche.net)
   (use gauche.uvector :only (read-block!))
   (use gauche.vport :only (<buffered-input-port>))
-  (use srfi-1 :only (filter-map))
   (use srfi-13)
   (export <pop3-error>
           <pop3-connection>
@@ -103,21 +102,19 @@
   (apply send-command conn fmt args)
   (get-response conn))
 
+(define (%read-line-until-dot :optional
+                              (input (current-input-port))
+                              (allow-byte-string? #f))
+  (let1 line (read-line input allow-byte-string?)
+    (cond [(eof-object? line) (error "unexpected EOF")]
+          [(string-prefix? ".." line) (string-drop line 1)]
+          [(string=? line ".") (eof-object)]
+          [else line])))
+
 (define (%read-long-response)
   (let* ([in (make <buffered-input-port> :fill read-block!)]
-         [reader (lambda ()
-                   (let1 line (read-line in #t)
-                     (cond [(eof-object? line)
-                            (error "unexpected EOF")]
-                           [(string-prefix? ".." line)
-                            (string-drop line 1)]
-                           [(equal? line ".")
-                            (eof-object)]
-                           [else line])))])
-    (port-for-each (lambda (line)
-                     (display line)
-                     (display *line-terminator*))
-                   reader)))
+         [reader (cute %read-line-until-dot in #t)])
+    (port-for-each (^l (display l) (display *line-terminator*)) reader)))
 
 (define (%long-response-to-string conn)
   (with-output-to-string
@@ -185,12 +182,14 @@
         (error <pop3-error> "wrong response format:" res))))
   (define (multi)
     (check-response (send&recv conn "LIST"))
-    (let1 lines (%long-response-to-string conn)
-      (filter-map (lambda (line)
-                    (and-let* ([(not (string-null? line))]
-                               [m (#/^(\d+)\s+(\d+)$/ line)])
-                      (cons (string->number (m 1)) (string->number (m 2)))))
-                  (string-split lines *line-terminator*))))
+    (port-fold-right
+      (^(line seed)
+        (if-let1 m (#/^(\d+)\s+(\d+)$/ line)
+          (acons (string->number (m 1)) (string->number (m 2)) seed)
+          seed))
+      '()
+      (cute %read-line-until-dot (socket-input-port (~ conn'socket)) #t)))
+
   (let1 msgnum (get-optional args #f)
     (if msgnum (single msgnum) (multi))))
 
@@ -236,12 +235,14 @@
         (error <pop3-error> "wrong response format:" res))))
   (define (multi)
     (check-response (send&recv conn "UIDL"))
-    (let1 lines (%long-response-to-string conn)
-      (filter-map (lambda (line)
-                    (and-let* ([(not (string-null? line))]
-                               [m (#/^(\d+)\s+(.+)$/ line)])
-                      (cons (string->number (m 1)) (m 2))))
-                  (string-split lines *line-terminator*))))
+    (port-fold-right
+      (^(line seed)
+        (if-let1 m (#/^(\d+)\s+(.+)$/ line)
+          (acons (string->number (m 1)) (m 2) seed)
+          seed))
+      '()
+      (cute %read-line-until-dot (socket-input-port (~ conn'socket)) #t)))
+
   (let1 msgnum (get-optional args #f)
     (if msgnum (single msgnum) (multi))))
 

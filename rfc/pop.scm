@@ -61,17 +61,15 @@
 (autoload rfc.md5 <md5>)
 (autoload util.digest digest-hexify digest-string)
 
-;; CRLF
+(define-constant *default-pop3-port* 110)
 (define-constant *line-terminator* (string #\cr #\lf))
 
 ;; This condition is thrown when error response is received.
 (define-condition-type <pop3-error> <error> #f)
 
-;;----------------------------------------------------------------------
+;;==========================================================
 ;; POP3 connection context
 ;;
-(define-constant *default-pop3-port* 110)
-
 (define-class <pop3-connection> ()
   ((socket :init-value #f)
    (greeting :init-value #f)))
@@ -82,7 +80,7 @@
     (set! (~ conn'greeting) (check-response (get-response conn)))))
 
 
-;;----------------------------------------------------------------------
+;;==========================================================
 ;; Utility functions and macros
 ;;
 (define (get-response conn)
@@ -153,60 +151,59 @@
          (if num (single num) (multi))))]))
 
 
-;;----------------------------------------------------------------------
+;;==========================================================
 ;; POP3 commands
 ;;
+;;    Minimal POP3 commands:
+;;      USER name
+;;      PASS string
+;;      STAT
+;;      LIST [msg]
+;;      RETR [msg]
+;;      DELE [msg]
+;;      NOOP
+;;      RSET
+;;      QUIT
 ;;
-;;  Minimal POP3 commands:
-;;    USER name
-;;    PASS string
-;;    STAT
-;;    LIST [msg]
-;;    RETR [msg]
-;;    DELE [msg]
-;;    NOOP
-;;    RSET
-;;    QUIT
-;;
-;;  Optional POP3 commands:
-;;    APOP name digest
-;;    TOP msg n
-;;    UIDL [msg]
+;;    Optional POP3 commands:
+;;      APOP name digest
+;;      TOP msg n
+;;      UIDL [msg]
 ;;
 
-;; USER <SP> <username> <CRLF>
+;; USER name
 (define-simple-command pop3-user "USER ~a" username)
 
-;; PASS <SP> <password> <CRLF>
+;; PASS string
 (define-simple-command pop3-pass "PASS ~a" password)
 
-;; STAT <CRLF>
+;; STAT
 (define-method pop3-stat ((conn <pop3-connection>))
   (let1 res (check-response (send&recv conn "STAT"))
     (if-let1 m (#/^\+OK\s+(\d+)\s+(\d+)/ res)
       (values (string->number (m 1)) (string->number (m 2)))
       (error <pop3-error> "wrong response format:" res))))
 
-;; LIST [<SP> <number>] <CRLF>
+;; LIST [msg]
 (define-list-method pop3-list "LIST"
   (^l (and-let* [(m (#/^\+OK\s+\d+\s+(\d+)$/ l))]
         (string->number (m 1))))
   (^l (and-let* [(m (#/^(\d+)\s+(\d+)$/ l))]
         (cons (string->number (m 1)) (string->number (m 2))))))
 
-;; RETR <SP> <number> <CRLF>
+;; RETR [msg]
 (define-fetch-method pop3-retr "RETR ~d" msgnum)
 
-;; DELE <SP> <number> <CRLF>
+;; DELE [msg]
 (define-simple-command pop3-dele "DELE ~d" msgnum)
 
-;; NOOP <CRLF>
+;; NOOP
 (define-simple-command pop3-noop "NOOP")
 
-;; RSET <CRLF>
+;; RSET
 (define-simple-command pop3-rset "RSET")
 
-;; QUIT <CRLF>
+;; QUIT
 (define-method pop3-quit ((conn <pop3-connection>))
   (unwind-protect
     (check-response (send&recv conn "QUIT"))
@@ -214,7 +211,7 @@
            (socket-close (~ conn'socket))
            (set! (~ conn'socket) #f))))
 
-;; APOP <SP> <username> <SP> <digest> <CRLF>
+;; APOP name digest
 (define-method pop3-apop ((conn <pop3-connection>) username password)
   (or (and-let* ([s (~ conn'greeting)]
                  [m (#/<.*>/ s)])
@@ -224,17 +221,17 @@
           (check-response (send&recv conn "APOP ~a ~a" username digest))))
       (error <pop3-error> "not APOP server; cannot login")))
 
-;; TOP <SP> <number> <SP> <lines> <CRLF>
+;; TOP msg n
 (define-fetch-method pop3-top "TOP ~d ~d" msgnum nlines)
 
-;; UIDL [<SP> <number>] <CRLF>
+;; UIDL [msg]
 (define-list-method pop3-uidl "UIDL"
   (^l (and-let* [(m (#/^\+OK\s+\d+\s+(.+)$/ l))] (m 1)))
   (^l (and-let* [(m (#/^(\d+)\s+(.+)$/ l))]
         (cons (string->number (m 1)) (m 2)))))
 
 
-;;----------------------------------------------------------------------
+;;==========================================================
 ;; Convenient procedure
 ;;
 (define (call-with-pop3-connection host proc

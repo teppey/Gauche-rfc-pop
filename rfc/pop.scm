@@ -116,12 +116,6 @@
          [reader (cute %read-line-until-dot in #t)])
     (port-for-each (^l (display l) (display *line-terminator*)) reader)))
 
-(define (%long-response-to-string conn)
-  (with-output-to-string
-    (lambda ()
-      (with-input-from-port (socket-input-port (~ conn'socket))
-        %read-long-response))))
-
 (define-syntax define-simple-command
   (syntax-rules ()
     [(_ name command args ...)
@@ -137,6 +131,26 @@
          (check-response (send&recv conn command args ...))
          (with-ports (socket-input-port (~ conn'socket)) sink #f %read-long-response)
          (flusher sink)))]))
+
+(define-syntax define-list-method
+  (syntax-rules ()
+    [(_ name command single-fn multi-fn)
+     (define-method name ((conn <pop3-connection>) . args)
+       (define (single num)
+         (let1 res (check-response (send&recv conn #`",command ~d" num))
+           (or (single-fn res)
+               (error <pop3-error> "wrong response format:" res))))
+       (define (multi)
+         (check-response (send&recv conn #`",command"))
+         (port-fold-right
+           (^(line seed)
+             (if-let1 r (multi-fn line)
+               (cons r seed)
+               seed))
+           '()
+           (cute %read-line-until-dot (socket-input-port (~ conn'socket)) #t)))
+       (let1 num (get-optional args #f)
+         (if num (single num) (multi))))]))
 
 
 ;;----------------------------------------------------------------------
@@ -174,24 +188,11 @@
       (error <pop3-error> "wrong response format:" res))))
 
 ;; LIST [<SP> <number>] <CRLF>
-(define-method pop3-list ((conn <pop3-connection>) . args)
-  (define (single msgnum)
-    (let1 res (check-response (send&recv conn "LIST ~d" msgnum))
-      (if-let1 m (#/^\+OK\s+\d+\s+(\d+)$/ res)
-        (string->number (m 1))
-        (error <pop3-error> "wrong response format:" res))))
-  (define (multi)
-    (check-response (send&recv conn "LIST"))
-    (port-fold-right
-      (^(line seed)
-        (if-let1 m (#/^(\d+)\s+(\d+)$/ line)
-          (acons (string->number (m 1)) (string->number (m 2)) seed)
-          seed))
-      '()
-      (cute %read-line-until-dot (socket-input-port (~ conn'socket)) #t)))
-
-  (let1 msgnum (get-optional args #f)
-    (if msgnum (single msgnum) (multi))))
+(define-list-method pop3-list "LIST"
+  (^l (and-let* [(m (#/^\+OK\s+\d+\s+(\d+)$/ l))]
+        (string->number (m 1))))
+  (^l (and-let* [(m (#/^(\d+)\s+(\d+)$/ l))]
+        (cons (string->number (m 1)) (string->number (m 2))))))
 
 ;; RETR <SP> <number> <CRLF>
 (define-fetch-method pop3-retr "RETR ~d" msgnum)
@@ -227,24 +228,10 @@
 (define-fetch-method pop3-top "TOP ~d ~d" msgnum nlines)
 
 ;; UIDL [<SP> <number>] <CRLF>
-(define-method pop3-uidl ((conn <pop3-connection>) . args)
-  (define (single msgnum)
-    (let1 res (check-response (send&recv conn "UIDL ~d" msgnum))
-      (if-let1 m (#/^\+OK\s+\d+\s+(.+)$/ res)
-        (m 1)
-        (error <pop3-error> "wrong response format:" res))))
-  (define (multi)
-    (check-response (send&recv conn "UIDL"))
-    (port-fold-right
-      (^(line seed)
-        (if-let1 m (#/^(\d+)\s+(.+)$/ line)
-          (acons (string->number (m 1)) (m 2) seed)
-          seed))
-      '()
-      (cute %read-line-until-dot (socket-input-port (~ conn'socket)) #t)))
-
-  (let1 msgnum (get-optional args #f)
-    (if msgnum (single msgnum) (multi))))
+(define-list-method pop3-uidl "UIDL"
+  (^l (and-let* [(m (#/^\+OK\s+\d+\s+(.+)$/ l))] (m 1)))
+  (^l (and-let* [(m (#/^(\d+)\s+(.+)$/ l))]
+        (cons (string->number (m 1)) (m 2)))))
 
 
 ;;----------------------------------------------------------------------

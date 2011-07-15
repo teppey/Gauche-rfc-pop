@@ -91,10 +91,9 @@
       (error <pop3-error> res)))
 
 (define (send-command conn fmt . args)
-  (let1 out (socket-output-port (~ conn'socket))
-    (with-signal-handlers ((SIGPIPE => #f))
-      (lambda ()
-        (apply format out #`",|fmt|,|*line-terminator*|" args)))))
+  (with-signal-handlers ((SIGPIPE => #f))
+    (cute apply format (socket-output-port (~ conn'socket))
+          #`",|fmt|,|*line-terminator*|" args)))
 
 (define (send&recv conn fmt . args)
   (apply send-command conn fmt args)

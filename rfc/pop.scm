@@ -103,33 +103,17 @@
   (apply send-command conn fmt args)
   (get-response conn))
 
-(define-syntax define-simple-command
-  (syntax-rules ()
-    [(_ name command args ...)
-     (define-method name ((conn <pop3-connection>) args ...)
-       (check-response (send&recv conn command args ...)))]))
-
-(define-syntax define-fetch-method
-  (syntax-rules ()
-    [(_ name command args ...)
-     (define-method name ((conn <pop3-connection>) args ... . options)
-       (let-keywords options ((sink (open-output-string))
-                              (flusher get-output-string))
-         (check-response (send&recv conn command args ...))
-         (with-ports (socket-input-port (~ conn'socket)) sink #f %read-long-response)
-         (flusher sink)))]))
-
 (define (%read-long-response)
-  (let* ((in (make <buffered-input-port> :fill read-block!))
-         (reader (lambda ()
+  (let* ([in (make <buffered-input-port> :fill read-block!)]
+         [reader (lambda ()
                    (let1 line (read-line in #t)
-                     (cond
-                       [(eof-object? line)
-                        (error "unexpected EOF")]
-                       [(string-prefix? ".." line)
-                        (string-drop line 1)]
-                       [(equal? line ".") (eof-object)]
-                       [else line])))))
+                     (cond [(eof-object? line)
+                            (error "unexpected EOF")]
+                           [(string-prefix? ".." line)
+                            (string-drop line 1)]
+                           [(equal? line ".")
+                            (eof-object)]
+                           [else line])))])
     (port-for-each (lambda (line)
                      (display line)
                      (display *line-terminator*))
@@ -140,6 +124,22 @@
     (lambda ()
       (with-input-from-port (socket-input-port (~ conn'socket))
         %read-long-response))))
+
+(define-syntax define-simple-command
+  (syntax-rules ()
+    [(_ name command args ...)
+     (define-method name ((conn <pop3-connection>) args ...)
+       (check-response (send&recv conn command args ...)))]))
+
+(define-syntax define-fetch-method
+  (syntax-rules ()
+    [(_ name command args ...)
+     (define-method name ((conn <pop3-connection>) args ... . options)
+       (let-keywords options ([sink (open-output-string)]
+                              [flusher get-output-string])
+         (check-response (send&recv conn command args ...))
+         (with-ports (socket-input-port (~ conn'socket)) sink #f %read-long-response)
+         (flusher sink)))]))
 
 
 ;;----------------------------------------------------------------------

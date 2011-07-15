@@ -38,7 +38,7 @@
   (use gauche.net)
   (use gauche.uvector :only (read-block!))
   (use gauche.vport :only (<buffered-input-port>))
-  (use srfi-13)
+  (use srfi-13 :only (string-prefix? string-drop string-downcase))
   (export <pop3-error>
           <pop3-connection>
           make-pop3-connection

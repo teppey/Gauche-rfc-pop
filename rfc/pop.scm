@@ -79,7 +79,6 @@
     (set! (~ conn'socket) (make-client-socket 'inet host port))
     (set! (~ conn'greeting) (check-response (get-response conn)))))
 
-
 ;;==========================================================
 ;; Utility functions and macros
 ;;
@@ -148,7 +147,6 @@
            (cute %read-line-until-dot (socket-input-port (~ conn'socket)) #t)))
        (let1 num (get-optional args #f)
          (if num (single num) (multi))))]))
-
 
 ;;==========================================================
 ;; POP3 commands
@@ -229,7 +227,6 @@
   (^l (and-let* [(m (#/^(\d+)\s+(.+)$/ l))]
         (cons (string->number (m 1)) (m 2)))))
 
-
 ;;==========================================================
 ;; Convenient procedure
 ;;
@@ -251,4 +248,3 @@
                      [username (pop3-user conn username)])
                (proc conn))
         (pop3-quit conn)))))
-

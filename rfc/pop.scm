@@ -183,9 +183,9 @@
 
 ;; LIST [msg]
 (define-list-method pop3-list "LIST"
-  (^l (and-let* [(m (#/^\+OK\s+\d+\s+(\d+)$/ l))]
+  (^l (and-let* ([m (#/^\+OK\s+\d+\s+(\d+)$/ l)])
         (string->number (m 1))))
-  (^l (and-let* [(m (#/^(\d+)\s+(\d+)$/ l))]
+  (^l (and-let* ([m (#/^(\d+)\s+(\d+)$/ l)])
         (cons (string->number (m 1)) (string->number (m 2))))))
 
 ;; RETR [msg]
@@ -223,8 +223,8 @@
 
 ;; UIDL [msg]
 (define-list-method pop3-uidl "UIDL"
-  (^l (and-let* [(m (#/^\+OK\s+\d+\s+(.+)$/ l))] (m 1)))
-  (^l (and-let* [(m (#/^(\d+)\s+(.+)$/ l))]
+  (^l (and-let* ([m (#/^\+OK\s+\d+\s+(.+)$/ l)]) (m 1)))
+  (^l (and-let* ([m (#/^(\d+)\s+(.+)$/ l)])
         (cons (string->number (m 1)) (m 2)))))
 
 ;;==========================================================

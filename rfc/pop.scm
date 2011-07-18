@@ -118,7 +118,7 @@
      (define-method name ((conn <pop3-connection>) args ...)
        (check-response (send&recv conn command args ...)))]))
 
-(define-syntax define-fetch-method
+(define-syntax define-fetch-command
   (syntax-rules ()
     [(_ name command args ...)
      (define-method name ((conn <pop3-connection>) args ... . options)
@@ -128,7 +128,7 @@
          (with-ports (socket-input-port (~ conn'socket)) sink #f %read-long-response)
          (flusher sink)))]))
 
-(define-syntax define-list-method
+(define-syntax define-list-command
   (syntax-rules ()
     [(_ name command single-fn multi-fn)
      (define-method name ((conn <pop3-connection>) . args)
@@ -182,14 +182,14 @@
       (error <pop3-error> "wrong response format:" res))))
 
 ;; LIST [msg]
-(define-list-method pop3-list "LIST"
+(define-list-command pop3-list "LIST"
   (^l (and-let* ([m (#/^\+OK\s+\d+\s+(\d+)$/ l)])
         (string->number (m 1))))
   (^l (and-let* ([m (#/^(\d+)\s+(\d+)$/ l)])
         (cons (string->number (m 1)) (string->number (m 2))))))
 
 ;; RETR [msg]
-(define-fetch-method pop3-retr "RETR ~d" msgnum)
+(define-fetch-command pop3-retr "RETR ~d" msgnum)
 
 ;; DELE [msg]
 (define-simple-command pop3-dele "DELE ~d" msgnum)
@@ -219,10 +219,10 @@
       (error <pop3-error> "not APOP server; cannot login")))
 
 ;; TOP msg n
-(define-fetch-method pop3-top "TOP ~d ~d" msgnum nlines)
+(define-fetch-command pop3-top "TOP ~d ~d" msgnum nlines)
 
 ;; UIDL [msg]
-(define-list-method pop3-uidl "UIDL"
+(define-list-command pop3-uidl "UIDL"
   (^l (and-let* ([m (#/^\+OK\s+\d+\s+(.+)$/ l)]) (m 1)))
   (^l (and-let* ([m (#/^(\d+)\s+(.+)$/ l)])
         (cons (string->number (m 1)) (m 2)))))

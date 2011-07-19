@@ -223,7 +223,8 @@
 
 ;; UIDL [msg]
 (define-list-command pop3-uidl "UIDL"
-  (^l (and-let* ([m (#/^\+OK\s+\d+\s+(.+)$/ l)]) (m 1)))
+  (^l (and-let* ([m (#/^\+OK\s+\d+\s+(.+)$/ l)])
+        (m 1)))
   (^l (and-let* ([m (#/^(\d+)\s+(.+)$/ l)])
         (cons (string->number (m 1)) (m 2)))))
 

@@ -204,9 +204,10 @@
 (define-method pop3-quit ((conn <pop3-connection>))
   (unwind-protect
     (check-response (send&recv conn "QUIT"))
-    (begin (socket-shutdown (~ conn'socket) SHUT_RDWR)
-           (socket-close (~ conn'socket))
-           (set! (~ conn'socket) #f))))
+    (when (~ conn'socket)
+      (socket-shutdown (~ conn'socket) SHUT_RDWR)
+      (socket-close (~ conn'socket))
+      (set! (~ conn'socket) #f))))
 
 ;; APOP name digest
 (define-method pop3-apop ((conn <pop3-connection>) username password)

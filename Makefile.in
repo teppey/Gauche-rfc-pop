@@ -65,5 +65,5 @@ distclean : clean
 	rm -rf $(CONFIG_GENERATED)
 
 maintainer-clean : clean
-	rm -rf $(CONFIG_GENERATED) configure VERSION README README.ja
+	rm -rf $(CONFIG_GENERATED) configure VERSION
 

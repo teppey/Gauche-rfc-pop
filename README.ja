@@ -1,0 +1,124 @@
+このモジュールはRFC1939に定められたPOP3プロトコルのクライアントAPIを提供します。
+
+Post Office Protocol - Version 3 [RFC1939]
+<http://www.ietf.org/rfc/rfc1939.txt>
+
+
+動作環境
+========
+
+    Gauche 0.9.1 以降
+
+インストール
+============
+
+    From tarball
+        $ gauche-package install [-S root] Gauche-rfc-pop-0.1.tgz
+
+    From source
+        $ git clone git://github.com/teppey/Gauche-rfc-pop.git
+        $ cd Gauche-rfc-pop
+        $ ./DIST gen
+        $ ./configure
+        $ make
+        $ make -s check
+        $ [sudo] make install
+
+Module API: rfc.pop
+===================
+
+Class: <pop3-connection>
+    POP3サーバへの接続を保持するオブジェクト。以下の公開スロットがあります。
+
+        Instance Variable of <pop3-connection>: greeting
+            POP3サーバが接続時に返す応答メッセージ
+
+Condition Type: <pop3-error>
+    このコンディションはサーバからエラー応答を受け取ったときや、サーバからの
+    応答のフォーマットが正しくない場合に投げられます。 <error>を継承します。
+
+Method: pop3-user (conn <pop3-connection>) username
+    USERコマンドをusernameとともにサーバに送り、応答を返します。
+
+Method: pop3-pass (conn <pop3-connection>) password
+    PASSコマンドをpasswordとともにサーバに送り、応答を返します。
+
+Method: pop3-stat (conn <pop3-connection>)
+    このメソッドは2つの値を返します。最初の値はメールボックスのメッセージ数
+    で、2番目の値はメールボックスのサイズです。
+
+Method: pop3-list (conn <pop3-connection>) &optional msgnum
+    省略可能な引数msgnumが指定された場合は、そのメッセージのサイズを返します。
+    引数が与えられなかったときはメッセージ番号とサイズの連想リストを返します。
+    このリストには削除マークのつけられたメールは含まれません。
+
+Method: pop3-retr (conn <pop3-connection>) msgnum &keyword sink flusher
+    メッセージ番号msgnumのメッセージの内容を取得し文字列として返します。この
+    挙動は、キーワード引数sinkおよびflusherを指定することでカスタマイズする
+    ことができます。これはメッセージを直接ファイルに保存するときなどに便利で
+    す。
+
+    sinkには出力ポート、flusherには1つの引数をとる手続きを与えます。メソッド
+    は受信したメールの内容をsinkに送ります。すべてのデータがsinkに送られたあ
+    と、flusherに与えられた手続きがsinkを引数として呼ばれ、その戻り値がpop3-
+    retrから返されます。
+
+Method: pop3-dele (conn <pop3-connection>) msgnum
+    メッセージに削除マークを付けます。pop3-quitによってコネクションがシャッ
+    トダウンされるまで実際の削除は行われません。
+
+Method: pop3-noop (conn <pop3-connection>)
+    NOOPコマンドをサーバに送ります。何もしませんが、接続を維持するために使わ
+    れます。
+
+Method: pop3-rset (conn <pop3-connection>)
+    pop3-deleで付けたすべての削除マークを取り消します。
+
+Method: pop3-quit (conn <pop3-connection>)
+    QUITコマンドをサーバに送り、コネクションをシャットダウンします。
+
+Method: pop3-apop (conn <pop3-connection>) username password
+    APOPコマンドをusernameとpasswordとともにサーバに送り、APOP方式で認証を
+    試みます。
+
+Method: pop3-top (conn <pop3-connection>) msgnum nlines &keyword sink flusher
+    pop3-retrと同様にメッセージを取得しますが、メッセージヘッダ以降の本文を
+    nlines行のみ取得します。nlinesが本文の行数よりも大きい場合、メッセージ全
+    体を取得します。
+
+Method: pop3-uidl (conn <pop3-connection>) &optional msgnum
+    省略可能な引数msgnumが与えられている場合、そのメッセージのユニークIDを返
+    します。ユニークIDはメッセージ番号と異なり、サーバに接続しなおしても変化
+    しません。引数が省略された場合はメッセージ番号とユニークIDの連想リストを
+    返します。このリストには削除マークのつけられたメールは含まれません。
+
+Function: call-with-pop3-connection host proc &keyword username password apop
+    POP3サーバhostに接続し、<pop3-connection>オブジェクトとともにprocを呼び
+    ます。デフォルトではサーバの110番ポートに接続しますが、host引数を
+    "hostname:port"という形式にすることでポート番号を明示的に指定することが
+    できます。
+
+    キーワード引数usernameおよびpasswordが与えられると、それらの値を使用して
+    認証を行った後にprocが呼ばれます。このときキーワード引数apopに真の値が与
+    えられていればAPOP方式で認証を行います。
+
+    procから返ったときにコネクションはクローズされ、procの戻り値が
+    call-with-pop3-connectionから返されます。
+
+Example
+=======
+
+    POP3サーバからメールを取得してローカルファイルに保存する例です。
+
+    (call-with-pop3-connection "pop.example.com"
+      (lambda (conn)
+        (for-each (lambda (pair)
+                    (let1 msgnum (car pair)
+                      (call-with-output-file #`"./inbox/,msgnum"
+                        (lambda (out)
+                          (pop3-retr conn msgnum :sink out :flusher (lambda _ #t))))
+                      (pop3-dele conn msgnum)))
+                  (pop3-list conn)))
+      :username "user"
+      :password "pass")
+

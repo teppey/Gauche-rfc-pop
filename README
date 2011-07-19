@@ -1,0 +1,129 @@
+This module provides a client API for POP3, defined in RFC1939.
+
+Post Office Protocol - Version 3 [RFC1939]
+<http://www.ietf.org/rfc/rfc1939.txt>
+
+
+Requirements
+============
+
+    Gauche 0.9.1 or later
+
+Install
+=======
+
+    From tarball
+        $ gauche-package install [-S root] Gauche-rfc-pop-0.1.tgz
+
+    From source
+        $ git clone git://github.com/teppey/Gauche-rfc-pop.git
+        $ cd Gauche-rfc-pop
+        $ ./DIST gen
+        $ ./configure
+        $ make
+        $ make -s check
+        $ [sudo] make install
+
+Module API: rfc.pop
+===================
+
+Class: <pop3-connection>
+    An object to keep POP3 connection to server. It has the following public
+    slots.
+
+        Instance Variable of <pop3-connection>: greeting
+            Server's greeting message.
+
+Condition Type: <pop3-error>
+    This condition is thrown when error response is received and format of
+    the response from the server is not correct. Inherits <error>.
+
+Method: pop3-user (conn <pop3-connection>) username
+    Send USER command with username to the server, and the response string is
+    returned.
+
+Method: pop3-pass (conn <pop3-connection>) password
+    Send PASS command with password to the server, and the response string
+    is returned.
+
+Method: pop3-stat (conn <pop3-connection>)
+    This method returns two values. The first value is number of messages in
+    mailbox, the second value is size of the mailbox.
+
+Method: pop3-list (conn <pop3-connection>) &optional msgnum
+    When optional argument msgnum is specified, the size of the message
+    returned. When the argument is omitted, the association list of the
+    message number and the size of the message is returned. This list is not
+    included message which marked as delete.
+
+Method: pop3-retr (conn <pop3-connection>) msgnum &keyword sink flusher
+    The content of the message of msgnum is acquired and it returns as
+    string. This behavior can be customized by specifying keyword argument
+    sink and flusher. When the message is preserved directly in the file,
+    this is convenient.
+
+    The output port is given in sink and the procedure that takes one
+    argument is given to flusher. The method sends sink the content of the
+    received message. After all data is sent to sink, call the procedure
+    given to flusher with sink as argument, and the return value is returned
+    from pop3-retr.
+
+Method: pop3-dele (conn <pop3-connection>) msgnum
+    The delete mark is put up to the message. A deletion actual until the
+    connection is shutdown pop3-quit is not done.
+
+Method: pop3-noop (conn <pop3-connection>)
+    Send NOOP command to the server. Do nothing, but used to keep connection.
+
+Method: pop3-rset (conn <pop3-connection>)
+    All the delete marks put up with pop3-dele are canceled.
+
+Method: pop3-quit (conn <pop3-connection>)
+    Send QUIT command to the server, the connection is shutdown.
+
+Method: pop3-apop (conn <pop3-connection>) username password
+    Send APOP command with username and password to the server, and try
+    authentication by APOP method.
+
+Method: pop3-top (conn <pop3-connection>) msgnum nlines &keyword sink flusher
+    This method retrieve message as well as pop3-retr, except that number of
+    lines of the indicated message's body. If the nlines is greater than the
+    number of lines in the body, return the entire message.
+
+Method: pop3-uidl (conn <pop3-connection>) &optional msgnum
+    When optional argument msgnum is specified, return unique-id of the
+    message. The unique-id of a message is different from message number, it
+    is not changed if connect to the server again. When the argument is
+    omitted, the association list of the message number and the unique-id is
+    returned. This list is not included message which marked as delete.
+
+Function: call-with-pop3-connection host proc &keyword username password apop
+    Connect to the POP3 server, and call proc with <pop3-connection> object.
+    This function is connect to the 110 port of the server in default, but
+    you can specify port number explicitly by the form "hostname:port".
+
+    When keyword argument username and password given, call proc after
+    authentication by using those values. At this time, if the true value is
+    given to keyword argument apop, it authenticate by APOP mehtod.
+
+    The connection is closed when returning from proc, and the return value
+    of proc is returned from call-with-pop3-connection.
+
+Example
+=======
+
+    This is an example code of the retrieve mail from POP3 server and save
+    in the local file.
+
+    (call-with-pop3-connection "pop.example.com"
+      (lambda (conn)
+        (for-each (lambda (pair)
+                    (let1 msgnum (car pair)
+                      (call-with-output-file #`"./inbox/,msgnum"
+                        (lambda (out)
+                          (pop3-retr conn msgnum :sink out :flusher (lambda _ #t))))
+                      (pop3-dele conn msgnum)))
+                  (pop3-list conn)))
+      :username "user"
+      :password "pass")
+

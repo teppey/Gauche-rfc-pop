@@ -68,8 +68,8 @@ Method: pop3-dele (conn <pop3-connection>) msgnum
     トダウンされるまで実際の削除は行われません。
 
 Method: pop3-noop (conn <pop3-connection>)
-    NOOPコマンドをサーバに送ります。何もしませんが、接続を維持するために使わ
-    れます。
+    NOOPコマンドをサーバに送ります。何もしませんが、サーバとの接続を確認する
+    のに便利です。
 
 Method: pop3-rset (conn <pop3-connection>)
     pop3-deleで付けたすべての削除マークを取り消します。

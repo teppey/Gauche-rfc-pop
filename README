@@ -73,7 +73,8 @@ Method: pop3-dele (conn <pop3-connection>) msgnum
     connection is shutdown pop3-quit is not done.
 
 Method: pop3-noop (conn <pop3-connection>)
-    Send NOOP command to the server. Do nothing, but used to keep connection.
+    Send NOOP command to the server. Do nothing, but useful for check the
+    connection of the server.
 
 Method: pop3-rset (conn <pop3-connection>)
     All the delete marks put up with pop3-dele are canceled.

@@ -1,4 +1,6 @@
-このモジュールはRFC1939に定められたPOP3プロトコルのクライアントAPIを提供します。
+このモジュールはRFC1939に定められたPOP3プロトコルのクライアントAPIを提供しま
+す。RFC1939の各コマンドに対応する手続きに加え、call-with-pop3-connectionのよ
+うな、やや高水準の手続きも用意されています。
 
 Post Office Protocol - Version 3 [RFC1939]
 <http://www.ietf.org/rfc/rfc1939.txt>
@@ -32,6 +34,11 @@ Class: <pop3-connection>
 
         Instance Variable of <pop3-connection>: greeting
             POP3サーバが接続時に返す応答メッセージ
+
+Function: make-pop3-connection host &optional port
+    hostで指定されたPOP3サーバに接続し、<pop3-connection>インスタンスを返し
+    ます。デフォルトでは110番ポートに接続しますが、省略可能な引数portを指定
+    することで接続先のポート番号を変更できます。
 
 Condition Type: <pop3-error>
     このコンディションはサーバからエラー応答を受け取ったときや、サーバからの
@@ -94,9 +101,8 @@ Method: pop3-uidl (conn <pop3-connection>) &optional msgnum
 
 Function: call-with-pop3-connection host proc &keyword username password apop
     POP3サーバhostに接続し、<pop3-connection>オブジェクトとともにprocを呼び
-    ます。デフォルトではサーバの110番ポートに接続しますが、host引数を
-    "hostname:port"という形式にすることでポート番号を明示的に指定することが
-    できます。
+    ます。host引数を"hostname:port"という形式にすることで接続するポート番号
+    を明示的に指定することができます。
 
     キーワード引数usernameおよびpasswordが与えられると、それらの値を使用して
     認証を行った後にprocが呼ばれます。このときキーワード引数apopに真の値が与

@@ -1,4 +1,6 @@
-This module provides a client API for POP3, defined in RFC1939.
+This module provides a client API for POP3, defined in RFC1939.  It
+corresponding to each command of RFC1939, plus a bit high level procedure
+like call-with-pop3-connection are prepared.
 
 Post Office Protocol - Version 3 [RFC1939]
 <http://www.ietf.org/rfc/rfc1939.txt>
@@ -33,6 +35,12 @@ Class: <pop3-connection>
 
         Instance Variable of <pop3-connection>: greeting
             Server's greeting message.
+
+Function: make-pop3-connection host &optional port
+    Connect to the POP3 server specified by host and return an instance of
+    <pop3-connection>. In default, this method connects to the 110 port of
+    the server, but you can change port number of the connection destination
+    when specify the optional argument port.
 
 Condition Type: <pop3-error>
     This condition is thrown when error response is received and format of
@@ -100,8 +108,7 @@ Method: pop3-uidl (conn <pop3-connection>) &optional msgnum
 
 Function: call-with-pop3-connection host proc &keyword username password apop
     Connect to the POP3 server, and call proc with <pop3-connection> object.
-    This function is connect to the 110 port of the server in default, but
-    you can specify port number explicitly by the form "hostname:port".
+    You can specify port number explicitly by the form "hostname:port".
 
     When keyword argument username and password given, call proc after
     authentication by using those values. At this time, if the true value is

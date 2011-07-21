@@ -155,6 +155,10 @@
          (call-with-pop3-connection #`"localhost:,*testsrv-port*" pop3-noop
                                     :username "user" :password "pass"))
 
+(test-ok "quit in call-with-pop3-connection"
+         (call-with-pop3-connection #`"localhost:,*testsrv-port*"
+           (lambda (conn) (pop3-quit conn))))
+
 (define conn (make-pop3-connection "localhost" *testsrv-port*))
 
 (test* "timestamp" *stamp* ((#/<.*>/ (~ conn'greeting))))

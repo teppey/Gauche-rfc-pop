@@ -14,10 +14,18 @@ Requirements
 Install
 =======
 
-    From tarball
+    Use gauche-package
         $ gauche-package install [-S root] Gauche-rfc-pop-0.1.tgz
 
-    From source
+    From tarball
+        $ tar xzf Gauche-rfc-pop-0.1tgz
+        $ cd Gauche-rfc-pop-0.1
+        $ ./configure
+        $ make
+        $ make -s check
+        $ [sudo] make install
+
+    From Github
         $ git clone git://github.com/teppey/Gauche-rfc-pop.git
         $ cd Gauche-rfc-pop
         $ ./DIST gen
